@@ -71,6 +71,8 @@ class Generator:
            If you specify the @klass attribute, it'll also allow attribute elements first:
            ((attribute_elements)*, (prop.type)prop.quantity)
         """
+        primitive_type = "#PCDATA"
+
         children_type = None
         attribute_elements = []
 
@@ -78,10 +80,14 @@ class Generator:
             if prop.type == Object:
                 return "ANY"
 
-            if prop.type in [type(""), type(1), type(1.0)]:
-                children_type = "#PCDATA"
+            if prop.type in [type(""), type(1), type(1.0), type(True)]:
+                children_type = primitive_type
             else:
                 children_type = self._format_name(prop.type)
+
+                # every root element can be replaced by a Reference element
+                if prop.type.__module__ == "fxpq.roots":
+                    children_type = children_type + " | reference"
 
         if klass:
             element_name = self._format_name(klass)
@@ -92,11 +98,22 @@ class Generator:
             return "EMPTY"
 
         if not attribute_elements:
-            return "({0}){1}".format(children_type, prop.quantity.value)
+            if children_type == primitive_type:
+                # only primitive content
+                return "({0})".format(children_type)
+            else:
+                # only specific type content
+                return "({0}){1}".format(children_type, prop.quantity.value)
 
         if not children_type:
+            # only properties
             return "({0})*".format(" | ".join(attribute_elements))
 
+        if children_type == primitive_type:
+            # mixed content
+            return "({0} | {1})*".format(children_type, " | ".join(attribute_elements))
+
+        # both properties and children are specific types
         return "(({0})*, ({1}){2})".format(" | ".join(attribute_elements), children_type, prop.quantity.value)
 
     def _generate_attributes(self, klass):

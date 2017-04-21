@@ -6,7 +6,8 @@ from fxpq.core import Object, Property, Quantity
 
 
 class Reference(Object):
-    pass
+    def __init__(self):
+        self.path = Property("")
 
 
 class Rectangle(Object):
@@ -18,8 +19,16 @@ class Rectangle(Object):
 
 
 class Change(Object):
-    pass
+    children = Property("")
+
+    def __init__(self):
+        self.version = Property("")
+        self.date = Property("")
+        self.breaking = Property(False)
 
 
 class Author(Object):
-    pass
+    children = Property("")
+
+    def __init__(self):
+        self.section = Property("")
