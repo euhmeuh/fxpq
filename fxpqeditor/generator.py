@@ -25,7 +25,15 @@ class Generator:
         # the root fxpq element is the only python namespace to have its own element definition
         fxpq_element = "<!ELEMENT fxpq ({0})>".format(" | ".join(
             [c.__name__.lower() for c in self.objects if c.__module__ == "fxpq.roots"]))
-        result .append(fxpq_element)
+        result.append(fxpq_element)
+
+        # it also have an attribute list with a version and all the xmlns definitions of other packages
+        attributes = ["version\tCDATA\t#REQUIRED"]
+        namespaces = {c.__module__.split(".")[0] for c in self.objects}
+        attributes.extend(["xmlns:{0}\tCDATA\t#FIXED\t\"python-namespace:{0}\"".format(ns)
+            for ns in namespaces if ns != "fxpq"])
+        fxpq_attlist = "<!ATTLIST fxpq\n\t{0}\n>".format("\n\t".join(attributes))
+        result.append(fxpq_attlist)
 
         for c in self.objects:
             result.extend(self._generate_element(c))
