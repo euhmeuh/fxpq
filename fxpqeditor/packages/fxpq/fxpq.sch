@@ -7,6 +7,10 @@
             <assert test="not(../@*[name() = substring-after(name(current()), '.')])">
                 The attribute <name /> is defined twice.
             </assert>
+            <!-- Check that the element is not defined twice -->
+            <assert test="count(../*[name() = name(current())]) &lt; 2">
+                The attribute <name /> is defined multiple times.
+            </assert>
         </rule>
     </pattern>
 </schema>
