@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fxpq>
+<fxpq version="1.0" xmlns:fxp2="python-namespace:fxp2">
+    <zone map="golfia.map" display_name="Golfia Fields">
+        <zone.rectangles>
+            <rectangle h="2" w="2" x="0" y="0" />
+        </zone.rectangles>
+
+        <fxp2:home model="small_with_one_door">
+            <fxp2:home.doors>
+                <fxp2:door model="wooden_home_door" target="tilly_home.fxpq" />
+            </fxp2:home.doors>
+        </fxp2:home>
+    </zone>
+</fxpq>

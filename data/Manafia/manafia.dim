@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fxpq>
+<fxpq version="1.0">
+    <!-- The "guid" shall be unique and never changed.
+         The "display_name" is the main name of the dimension.
+
+         You can set an optional "version" attribute and change it every time you modify the dimension.
+         People with an older version will be asked to update if they want.
+         Before doing so, they will be shown the latest changelog,
+         with an additional warning and confirmation dialog if breaking changes were introduced.-->
+    <dimension version="0.3" guid="98c04394-67f5-4285-a7c7-91418fb684f2" display_name="Manafia">
+
+        <dimension.changelog>
+            <change version="0.3" date="2017-06-21T23:00:48Z" breaking="True">Breaking change: Your chest inventory will be deleted!</change>
+            <change version="0.2" date="2017-06-05T02:34:05Z">Added a new zone</change>
+            <change version="0.1" date="2017-04-14T14:01:00Z">Created the dimension</change>
+        </dimension.changelog>
+
+        <!-- Credits to the people that worked on this dimension, with an optional "section" attribute
+             to organize them in custom categories (e.g. "Graphics", "Story", "Level Design"...) -->
+        <dimension.authors>
+            <author section="Design">EuhMeuh</author>
+            <author>Master-Pit</author>
+            <author>T-Dj@-Mort</author>
+            <author>Head Hunter (aka Apokalypse)</author>
+        </dimension.authors>
+
+        <!-- This text is shown in the dimension selector, and on the official dimension repository. -->
+        <dimension.description>
+            The land created after the big rebalance.
+            (This is the official FXP2 main dimension)
+        </dimension.description>
+
+        <!-- Size of the minimal square cell, in tiles.
+             Zones in this dimension will be composed of such cells.
+             WARNING: Changing this number is NOT recommended, as
+             it will mess up all the maps that were relying on it. -->
+        <dimension.cellsize>24</dimension.cellsize>
+
+        <!-- The content of a dimension is a list of zones and/or references to zones. -->
+        <reference path="golfia.fxpq" />
+        <reference path="elfia.fxpq" />
+
+    </dimension>
+</fxpq>
