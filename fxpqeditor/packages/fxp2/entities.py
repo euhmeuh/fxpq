@@ -6,11 +6,14 @@ from fxpq.core import Object, Property, Quantity
 
 
 class Key(Object):
+    """A condition for a Door to open"""
+
     pass
 
 
 class Door(Object):
     """A door that leads to another level"""
+
     def __init__(self):
         self.model = Property("")
         self.target = Property("")
@@ -19,6 +22,7 @@ class Door(Object):
 
 class Home(Object):
     """A simple outside home with a variable number of doors"""
+
     def __init__(self):
         self.model = Property("")
         self.doors = Property(Door, quantity=Quantity.OneOrMore)

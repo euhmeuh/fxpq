@@ -6,11 +6,15 @@ from fxpq.core import Object, Property, Quantity
 
 
 class Reference(Object):
+    """Reference to another fxpq file containing a root object"""
+
     def __init__(self):
         self.path = Property("")
 
 
 class Rectangle(Object):
+    """Boundaries of a Zone"""
+
     def __init__(self):
         self.x = Property(0)
         self.y = Property(0)
@@ -19,6 +23,8 @@ class Rectangle(Object):
 
 
 class Change(Object):
+    """Changes that happened to a dimension"""
+
     children = Property("")
 
     def __init__(self):
@@ -28,6 +34,8 @@ class Change(Object):
 
 
 class Author(Object):
+    """Author of a dimension"""
+
     children = Property("")
 
     def __init__(self):

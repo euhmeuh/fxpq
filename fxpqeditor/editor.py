@@ -2,8 +2,10 @@
 
 import tkinter as tk
 from tkinter import ttk, filedialog
-
 import pygubu
+
+from texteditor import FxpqNotebook
+
 
 """
 TODO:
@@ -25,6 +27,7 @@ Text editor:
 - Autocomplete class and properties
 """
 
+
 class Application(pygubu.TkApplication):
     def _create_ui(self):
         self.builder = builder = pygubu.Builder()
@@ -36,7 +39,10 @@ class Application(pygubu.TkApplication):
         self.panedwindow = builder.get_object('Panedwindow_Main', self.master)
         self.panedwindow.pack(fill=tk.BOTH, expand=1)
 
-        self.texteditor = builder.get_object('Text_Editor', self.master)
+        self.notebook = FxpqNotebook()
+
+        self.pane_editor = builder.get_object('Pane_Editor', self.master)
+        self.pane_editor.add(self.notebook)
 
         self.mainmenu = menu = builder.get_object('Menu_Main', self.master)
         self.set_menu(menu)
@@ -51,10 +57,7 @@ class Application(pygubu.TkApplication):
         if not filepath:
             return
 
-        with open(filepath) as f:
-            text = f.read()
-            self.texteditor.delete("1.0", tk.END)
-            self.texteditor.insert(tk.END, text)
+        self.notebook.open(filepath)
 
     def on_quit(self):
         self.quit()

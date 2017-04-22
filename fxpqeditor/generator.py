@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
 
-PACKAGES_DIR = "./packages"
-
-import sys
-sys.path.insert(0, PACKAGES_DIR)
-
 import pkgutil
 
-from fxpq.core import Object
 
 class Generator:
-    def __init__(self, package_list):
+    def __init__(self, packages_dir, package_list):
+
+        self.packages_dir = packages_dir
+        # allow local imports from the specified directory
+        import sys
+        sys.path.insert(0, packages_dir)
+
+        # TODO: replace with a string parameter "Object"?
+        from fxpq.core import Object
+        self.base = Object
+
         self.packages = package_list
         self.objects = {}
 
     def generate(self):
         for package in self.packages:
-            self._find_and_import_modules(PACKAGES_DIR, package)
+            self._find_and_import_modules(self.packages_dir, package)
 
-        self.objects = Object.__subclasses__()
+        self.objects = self.base.__subclasses__()
 
         result = []
 
@@ -77,7 +81,7 @@ class Generator:
         attribute_elements = []
 
         if prop:
-            if prop.type == Object:
+            if prop.type == self.base:
                 return "ANY"
 
             if prop.type in [type(""), type(1), type(1.0), type(True)]:
@@ -152,10 +156,3 @@ class Generator:
             element_name = namespace + ":" + element_name
 
         return element_name
-
-
-if __name__ == '__main__':
-    generator = Generator(["fxpq", "fxp2"])
-    dtd = generator.generate()
-    with open("generated.dtd", 'w') as f:
-        f.write(dtd)
