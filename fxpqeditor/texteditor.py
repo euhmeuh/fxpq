@@ -14,8 +14,8 @@ from validator import Validator
 class LiveText(tk.Text):
     """Text widget that calls on_modified() when edits are made by the user"""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master=None):
+        super().__init__(master)
 
         self._resetting_modified_flag = False
         self.bind('<<Modified>>', self._on_modified)
@@ -41,8 +41,13 @@ class LiveText(tk.Text):
 
 class FxpqText(LiveText):
 
-    def __init__(self):
-        super().__init__()
+    tags = {
+        'error': 'orange',
+        'focused_tag': 'purple'
+    }
+
+    def __init__(self, master=None):
+        super().__init__(master)
 
         self.filepath = ""
 
@@ -61,23 +66,36 @@ class FxpqText(LiveText):
 
     def on_modified(self, event=None):
         text = self.get(1.0, tk.END)
+        self.tag_remove('error', "1.0", "end")
         if not self.validator.validate(text):
             self._highlight_errors(self.validator.errors)
 
+    def open(self, filepath):
+        self.filepath = filepath
+        with open(filepath) as f:
+            text = f.read()
+            self.insert(tk.END, text)
+
+    def _configure_tags(self):
+        for tag, val in self.tags.items():
+            self.tag_config(tag, background=val)
+
     def _highlight_errors(self, errors):
         print(errors)
+        for error in errors:
+            self.tag_add('error',
+                "{0}.0 linestart".format(error.line),
+                "{0}.0 lineend".format(error.line))
+
 
 class FxpqNotebook(ttk.Notebook):
     """The main document manager of the fxpq editor"""
 
     def open(self, filepath):
-        fxpqtext = FxpqText()
-        fxpqtext.filepath = filepath
-        with open(filepath) as f:
-            text = f.read()
-            fxpqtext.insert(tk.END, text)
-
         scrollbar = ScrollbarHelper(master=self)
+        fxpqtext = FxpqText(master=scrollbar)
         scrollbar.add_child(fxpqtext)
+
+        fxpqtext.open(filepath)
 
         self.add(scrollbar, text=filepath)
