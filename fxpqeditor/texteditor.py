@@ -51,6 +51,14 @@ class FxpqText(LiveText):
 
         self.validator = Validator(self.dtd, "packages/fxpq/fxpq.sch")
 
+        self.bind("<Tab>", self.on_tab)
+        self.configure(wrap=tk.NONE)
+        self._configure_tags()
+
+    def on_tab(self, event=None):
+        self.insert(tk.INSERT, " " * 4)
+        return 'break'
+
     def on_modified(self, event=None):
         text = self.get(1.0, tk.END)
         if not self.validator.validate(text):
