@@ -96,13 +96,11 @@ class FxpqText(LiveText):
 
         for start, end in partition(disabled_ranges, 2):
             if start <= comparable(self.index(tk.INSERT)) <= end:
-                print(start, comparable(self.index(tk.INSERT)), end)
                 return 'break'
 
             try:
                 sel_first = comparable(self.index(tk.SEL_FIRST))
                 sel_last = comparable(self.index(tk.SEL_LAST))
-                print(sel_first, sel_last)
             except tk.TclError:
                 pass  # no selection
             else:
