@@ -2,6 +2,8 @@
 Custom text editor with syntax highlighting and live validations
 """
 
+import regex as re
+
 import tkinter as tk
 from tkinter import ttk
 
@@ -42,8 +44,24 @@ class LiveText(tk.Text):
 class FxpqText(LiveText):
 
     tags = {
-        'error': 'orange',
-        'focused_tag': 'purple'
+        'error': {'background': '#f92672'},
+        'tag_name': {'foreground': '#f92672'},
+        'attr_name': {'foreground': '#a6e22a'},
+        'attr_value': {'foreground': '#e6db5a'},
+        'focused_tag': {'underline': 'true'},
+        'comment': {'foreground': '#75715e'},
+        'cdata': {'foreground': '#e6db5a'},
+        'disabled': {'foreground': 'darkgrey', 'background': 'grey', 'bgstipple': 'gray12'},
+    }
+
+    qualified_name = r'(?:[a-zA-Z_][\w_.-]*:)?[a-zA-Z_][\w_.-]*'
+    syntax = {
+        'disabled': r'(^<\?.*?\?>\s*<!DOCTYPE\s+.*?>\n?)',
+        'tag_name': r'</?\s*({{qualified_name}})\s*.*?>',
+        'attr_name': r'</?\s*{{qualified_name}}(?:\s*({{qualified_name}})=\".*?\"\s*)+/?>',
+        'attr_value': r'</?\s*{{qualified_name}}(?:\s*{{qualified_name}}=(\".*?\")\s*)+/?>',
+        'comment': r'(<!--.+?-->)',
+        'cdata': r'(<!\[CDATA\[.*?\]\]>)',
     }
 
     def __init__(self, master=None):
@@ -57,7 +75,11 @@ class FxpqText(LiveText):
         self.validator = Validator(self.dtd, "packages/fxpq/fxpq.sch")
 
         self.bind("<Tab>", self.on_tab)
-        self.configure(wrap=tk.NONE)
+        self.configure(wrap=tk.NONE,
+            foreground='white',
+            background='#272822',
+            insertbackground='white',
+            selectbackground='#49483e')
         self._configure_tags()
 
     def on_tab(self, event=None):
@@ -66,7 +88,8 @@ class FxpqText(LiveText):
 
     def on_modified(self, event=None):
         text = self.get(1.0, tk.END)
-        self.tag_remove('error', "1.0", "end")
+        self._remove_tags()
+        self._highlight(text)
         if not self.validator.validate(text):
             self._highlight_errors(self.validator.errors)
 
@@ -78,21 +101,34 @@ class FxpqText(LiveText):
 
     def _configure_tags(self):
         for tag, val in self.tags.items():
-            self.tag_config(tag, background=val)
+            self.tag_config(tag, **val)
+
+    def _remove_tags(self):
+        for tag in self.tags.keys():
+            self.tag_remove(tag, "1.0", "end")
+
+    def _highlight(self, text):
+        for tag, rule in self.syntax.items():
+            regex = rule.replace(r'{{qualified_name}}', self.qualified_name)
+            for match in re.finditer(regex, text, flags=re.DOTALL):
+                for start, end in match.spans(1):
+                    self.tag_add(tag,
+                        "1.0 + {} chars".format(start),
+                        "1.0 + {} chars".format(end))
 
     def _highlight_errors(self, errors):
         print(errors)
         for error in errors:
             self.tag_add('error',
-                "{0}.0 linestart".format(error.line),
-                "{0}.0 lineend".format(error.line))
+                "{}.0 linestart".format(error.line),
+                "{}.0 lineend + 1 chars".format(error.line))
 
 
 class FxpqNotebook(ttk.Notebook):
     """The main document manager of the fxpq editor"""
 
     def open(self, filepath):
-        scrollbar = ScrollbarHelper(master=self)
+        scrollbar = ScrollbarHelper(master=self, scrolltype='both')
         fxpqtext = FxpqText(master=scrollbar)
         scrollbar.add_child(fxpqtext)
 

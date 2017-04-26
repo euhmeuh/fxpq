@@ -73,6 +73,6 @@ class Validator:
         # remove encoding tag because lxml won't accept it for unicode objects
         if string.startswith('<?'):
             # we replace the line with a line feed so that the line numbers don't change
-            string = re.sub(r'^\<\?.*?\?\>', '', string, flags=re.DOTALL)
+            string = re.sub(r'^<\?.*?\?>', '', string, flags=re.DOTALL)
 
         return string

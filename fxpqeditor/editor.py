@@ -53,6 +53,7 @@ class Application(pygubu.TkApplication):
         filepath = filedialog.askopenfilename(
             filetypes = (
                 ("FXPQ file", "*.fxpq"),
+                ("FXPQ file", "*.dim"),
                 ("All files", "*.*")))
         if not filepath:
             return
