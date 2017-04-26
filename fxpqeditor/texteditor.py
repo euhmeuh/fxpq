@@ -11,6 +11,7 @@ from pygubu.builder.widgets.scrollbarhelper import ScrollbarHelper
 
 from generator import Generator
 from validator import Validator
+from tools import partition
 
 
 class LiveText(tk.Text):
@@ -74,6 +75,7 @@ class FxpqText(LiveText):
 
         self.validator = Validator(self.dtd, "packages/fxpq/fxpq.sch")
 
+        self.bind('<Key>', self.on_key)
         self.bind("<Tab>", self.on_tab)
         self.configure(wrap=tk.NONE,
             foreground='white',
@@ -81,6 +83,25 @@ class FxpqText(LiveText):
             insertbackground='white',
             selectbackground='#49483e')
         self._configure_tags()
+
+    def on_key(self, key):
+        disabled_ranges = self.tag_ranges('disabled')
+        if key.keysym in ['Left', 'Right', 'Down', 'Up']:
+            return
+
+        for start, end in partition(disabled_ranges, 2):
+            if str(start) <= str(self.index(tk.INSERT)) <= str(end):
+                return 'break'
+
+            try:
+                sel_first = str(self.index(tk.SEL_FIRST))
+                sel_last = str(self.index(tk.SEL_LAST))
+            except tk.TclError:
+                pass  # no selection
+            else:
+                if(str(start) <= sel_first <= str(end)
+                or str(start) <= sel_last <= str(end)):
+                    return 'break'
 
     def on_tab(self, event=None):
         self.insert(tk.INSERT, " " * 4)
