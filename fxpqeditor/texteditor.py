@@ -85,22 +85,29 @@ class FxpqText(LiveText):
         self._configure_tags()
 
     def on_key(self, key):
-        disabled_ranges = self.tag_ranges('disabled')
+
+        # make the ranges easier to compare
+        def comparable(range):
+            return float(str(range))
+
+        disabled_ranges = list(map(comparable, self.tag_ranges('disabled')))
         if key.keysym in ['Left', 'Right', 'Down', 'Up']:
             return
 
         for start, end in partition(disabled_ranges, 2):
-            if str(start) <= str(self.index(tk.INSERT)) <= str(end):
+            if start <= comparable(self.index(tk.INSERT)) <= end:
+                print(start, comparable(self.index(tk.INSERT)), end)
                 return 'break'
 
             try:
-                sel_first = str(self.index(tk.SEL_FIRST))
-                sel_last = str(self.index(tk.SEL_LAST))
+                sel_first = comparable(self.index(tk.SEL_FIRST))
+                sel_last = comparable(self.index(tk.SEL_LAST))
+                print(sel_first, sel_last)
             except tk.TclError:
                 pass  # no selection
             else:
-                if(str(start) <= sel_first <= str(end)
-                or str(start) <= sel_last <= str(end)):
+                if((start <= sel_first <= end)
+                or (start <= sel_last <= end)):
                     return 'break'
 
     def on_tab(self, event=None):
