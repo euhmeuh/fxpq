@@ -9,8 +9,6 @@ from tkinter import ttk
 
 from pygubu.builder.widgets.scrollbarhelper import ScrollbarHelper
 
-from generator import Generator
-from validator import Validator
 from tools import partition
 
 
@@ -65,15 +63,12 @@ class FxpqText(LiveText):
         'cdata': r'(<!\[CDATA\[.*?\]\]>)',
     }
 
-    def __init__(self, master=None):
+    def __init__(self, generator, validator, master=None):
         super().__init__(master)
 
         self.filepath = ""
-
-        self.generator = Generator("./packages", ["fxpq", "fxp2"])
-        self.dtd = self.generator.generate()
-
-        self.validator = Validator(self.dtd, "packages/fxpq/fxpq.sch")
+        self.generator = generator
+        self.validator = validator
 
         self.bind('<Key>', self.on_key)
         self.bind("<Tab>", self.on_tab)
@@ -119,6 +114,10 @@ class FxpqText(LiveText):
         if not self.validator.validate(text):
             self._highlight_errors(self.validator.errors)
 
+    def set_text(self, text):
+        self.delete(1.0, tk.END)
+        self.insert(tk.END, text)
+
     def open(self, filepath):
         self.filepath = filepath
         with open(filepath) as f:
@@ -153,11 +152,23 @@ class FxpqText(LiveText):
 class FxpqNotebook(ttk.Notebook):
     """The main document manager of the fxpq editor"""
 
+    def __init__(self, generator, validator, master=None):
+        super().__init__(master)
+        self.generator = generator
+        self.validator = validator
+
+    def new(self, title="untitled", text=""):
+        fxpqtext = FxpqText(self.generator, self.validator)
+        fxpqtext.set_text(text)
+        self._new_tab(title, fxpqtext)
+
     def open(self, filepath):
-        scrollbar = ScrollbarHelper(master=self, scrolltype='both')
-        fxpqtext = FxpqText(master=scrollbar)
-        scrollbar.add_child(fxpqtext)
-
+        fxpqtext = FxpqText(self.generator, self.validator)
         fxpqtext.open(filepath)
+        self._new_tab(filepath, fxpqtext)
 
-        self.add(scrollbar, text=filepath)
+    def _new_tab(self, name, element):
+        scrollbar = ScrollbarHelper(master=self, scrolltype='both')
+        scrollbar.add_child(element)
+        element.master = scrollbar
+        self.add(scrollbar, text=name)

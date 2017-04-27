@@ -4,14 +4,15 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import pygubu
 
+from templator import Templator
+from generator import Generator
+from validator import Validator
 from texteditor import FxpqNotebook
 
 
 """
 TODO:
-- New menu is populated with standard types (zon, npc, item, enemy...)
 - Save and Save as menu
-- Opening files creates tabs
 - Custom tabs with a close button
 - Solution tree / Untracked tree
 - New files saved inside the dimension folder get tracked
@@ -19,7 +20,6 @@ TODO:
 
 Text editor:
 - Line numbers
-- Text highlighting
 - Right click copy/cut/paste
 - Search & replace
 - Display validation errors
@@ -39,7 +39,11 @@ class Application(pygubu.TkApplication):
         self.panedwindow = builder.get_object('Panedwindow_Main', self.master)
         self.panedwindow.pack(fill=tk.BOTH, expand=1)
 
-        self.notebook = FxpqNotebook()
+        self.templator = Templator("./templates")
+        self.generator = Generator("./packages", ["fxpq", "fxp2"])
+        dtd = self.generator.generate()
+        self.validator = Validator(dtd, "packages/fxpq/fxpq.sch")
+        self.notebook = FxpqNotebook(self.generator, self.validator)
 
         self.pane_editor = builder.get_object('Pane_Editor', self.master)
         self.pane_editor.add(self.notebook)
@@ -48,6 +52,12 @@ class Application(pygubu.TkApplication):
         self.set_menu(menu)
 
         builder.connect_callbacks(self)
+        self._configure_menu()
+
+    def on_new(self, obj_type):
+        typename = obj_type.__name__.lower()
+        text = self.templator.new(obj_type)
+        self.notebook.new(title="untitled {}".format(typename), text=text)
 
     def on_open(self):
         filepath = filedialog.askopenfilename(
@@ -72,6 +82,14 @@ class Application(pygubu.TkApplication):
 
         buttonclose.config(command=on_close_about)
         about.run()
+
+    def _configure_menu(self):
+        menu = self.builder.get_object('Submenu_New', self.master)
+
+        for root in self.generator.rootobjects():
+            # we capture root in the lambda closure by using default parameters
+            command = lambda root=root: self.on_new(root)
+            menu.add_command(label=root.__name__, command=command)
 
 
 if __name__ == '__main__':

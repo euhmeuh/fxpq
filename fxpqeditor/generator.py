@@ -1,5 +1,8 @@
-#!/usr/bin/env python3
+"""
+Generates DTD rules from python packages
+"""
 
+from os import path
 import pkgutil
 
 
@@ -28,7 +31,7 @@ class Generator:
 
         # the root fxpq element is the only python namespace to have its own element definition
         fxpq_element = "<!ELEMENT fxpq ({0})>".format(" | ".join(
-            [c.__name__.lower() for c in self.objects if c.__module__ == "fxpq.roots"]))
+            [c.__name__.lower() for c in self.rootobjects()]))
         result.append(fxpq_element)
 
         # it also have an attribute list with a version and all the xmlns definitions of other packages
@@ -44,13 +47,16 @@ class Generator:
 
         return "\n".join(result)
 
+    def rootobjects(self):
+        return [o for o in self.objects if o.root]
+
     def _find_and_import_modules(self, pkg_dir, package, parent=""):
-        path = pkg_dir + "/" + package
+        pkgpath = path.join(pkg_dir, package)
         prefix = package + "."
         if parent:
             prefix = parent + "." + prefix
 
-        for importer, modname, ispkg in pkgutil.walk_packages(path=[path], prefix=prefix):
+        for importer, modname, ispkg in pkgutil.walk_packages(path=[pkgpath], prefix=prefix):
             print("Found {0} {1}".format("package" if ispkg else "module", modname))
             if ispkg:
                 self._find_and_import_modules(importer.path, modname, package)
@@ -90,7 +96,7 @@ class Generator:
                 children_type = self._format_name(prop.type)
 
                 # every root element can be replaced by a Reference element
-                if prop.type.__module__ == "fxpq.roots":
+                if prop.type.root:
                     children_type = children_type + " | reference"
 
         if klass:

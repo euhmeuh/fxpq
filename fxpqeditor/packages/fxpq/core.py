@@ -29,6 +29,7 @@ class Property:
 class Object:
     """Abstract base of all FXPQuest objects"""
 
+    root = False
     children = None
 
     def move(self, delta_time):

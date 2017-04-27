@@ -7,6 +7,7 @@ from fxpq.entities import Rectangle, Change, Author
 
 
 class Zone(Object):
+    root = True
     children = Property(Object, quantity=Quantity.ZeroOrMore)
 
     def __init__(self):
@@ -16,6 +17,7 @@ class Zone(Object):
 
 
 class Dimension(Object):
+    root = True
     children = Property(Zone, quantity=Quantity.ZeroOrMore)
 
     def __init__(self):

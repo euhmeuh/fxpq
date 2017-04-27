@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+"""
+Validates XML files against DTD and schematron rules
+"""
 
 import re
 from io import StringIO
