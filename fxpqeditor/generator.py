@@ -160,6 +160,4 @@ class Generator:
         return element_name
 
     def _get_namespace(self, klass):
-        parts = klass.__module__.split(".")
-        # the namespace is the first package that is not the packages directory
-        return next(p for p in parts if p != self.packages_dir.name)
+        return klass.__module__.split(".")[0]
