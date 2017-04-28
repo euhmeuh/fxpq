@@ -2,28 +2,26 @@
 Generates DTD rules from python packages
 """
 
-from os import path
+from pathlib import PurePath
 import pkgutil
+import importlib
 
 
 class Generator:
-    def __init__(self, packages_dir, package_list):
+    def __init__(self, packages_dir):
 
-        self.packages_dir = packages_dir
-        # allow local imports from the specified directory
-        import sys
-        sys.path.insert(0, packages_dir)
+        self.packages_dir = PurePath(packages_dir)
 
-        # TODO: replace with a string parameter "Object"?
+        self.register_packages(packages_dir)
+
+        # define Object as the base class for all elements
         from fxpq.core import Object
         self.base = Object
 
-        self.packages = package_list
         self.objects = {}
 
     def generate(self):
-        for package in self.packages:
-            self._find_and_import_modules(self.packages_dir, package)
+        self._find_and_import_modules(self.packages_dir)
 
         self.objects = self.base.__subclasses__()
 
@@ -36,7 +34,7 @@ class Generator:
 
         # it also have an attribute list with a version and all the xmlns definitions of other packages
         attributes = ["version\tCDATA\t#REQUIRED"]
-        namespaces = {c.__module__.split(".")[0] for c in self.objects}
+        namespaces = {self._get_namespace(c) for c in self.objects}
         attributes.extend(["xmlns:{0}\tCDATA\t#FIXED\t\"python-namespace:{0}\"".format(ns)
             for ns in namespaces if ns != "fxpq"])
         fxpq_attlist = "<!ATTLIST fxpq\n\t{0}\n>".format("\n\t".join(attributes))
@@ -50,18 +48,16 @@ class Generator:
     def rootobjects(self):
         return [o for o in self.objects if o.root]
 
-    def _find_and_import_modules(self, pkg_dir, package, parent=""):
-        pkgpath = path.join(pkg_dir, package)
-        prefix = package + "."
-        if parent:
-            prefix = parent + "." + prefix
+    def register_packages(self, directory):
+        """Allow imports from the specified directory"""
+        import sys
+        sys.path.insert(0, directory)
 
-        for importer, modname, ispkg in pkgutil.walk_packages(path=[pkgpath], prefix=prefix):
+    def _find_and_import_modules(self, pkg_dir):
+        for importer, modname, ispkg in pkgutil.walk_packages(path=[pkg_dir]):
             print("Found {0} {1}".format("package" if ispkg else "module", modname))
-            if ispkg:
-                self._find_and_import_modules(importer.path, modname, package)
-            else:
-                __import__(modname)
+            if not ispkg:
+                importlib.import_module(modname)
 
     def _generate_element(self, klass):
         result = []
@@ -153,7 +149,7 @@ class Generator:
         return "<!ELEMENT {0}.{1} {2}>".format(element_name, name, children)
 
     def _format_name(self, klass):
-        namespace = klass.__module__.split(".")[0]
+        namespace = self._get_namespace(klass)
         element_name = klass.__name__.lower()
 
         # elements that are not part of the fxpq namespace
@@ -162,3 +158,8 @@ class Generator:
             element_name = namespace + ":" + element_name
 
         return element_name
+
+    def _get_namespace(self, klass):
+        parts = klass.__module__.split(".")
+        # the namespace is the first package that is not the packages directory
+        return next(p for p in parts if p != self.packages_dir.name)

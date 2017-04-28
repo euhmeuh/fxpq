@@ -40,7 +40,7 @@ class Application(pygubu.TkApplication):
         self.panedwindow.pack(fill=tk.BOTH, expand=1)
 
         self.templator = Templator("./templates")
-        self.generator = Generator("./packages", ["fxpq", "fxp2"])
+        self.generator = Generator("./packages")
         dtd = self.generator.generate()
         self.validator = Validator(dtd, "packages/fxpq/fxpq.sch")
         self.notebook = FxpqNotebook(self.generator, self.validator)
