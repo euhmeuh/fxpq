@@ -172,3 +172,4 @@ class FxpqNotebook(ttk.Notebook):
         scrollbar.add_child(element)
         element.master = scrollbar
         self.add(scrollbar, text=name)
+        self.select(scrollbar)
