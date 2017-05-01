@@ -65,6 +65,7 @@
         </child>
         <child>
           <object class="tk.Menuitem.Command" id="Command_Open">
+            <property name="accelerator">Ctrl+O</property>
             <property name="command">on_open</property>
             <property name="command_id_arg">false</property>
             <property name="label" translatable="yes">Open...</property>
@@ -72,6 +73,7 @@
         </child>
         <child>
           <object class="tk.Menuitem.Command" id="Command_Save">
+            <property name="accelerator">Ctrl+S</property>
             <property name="command">on_save</property>
             <property name="command_id_arg">false</property>
             <property name="label" translatable="yes">Save</property>
@@ -156,7 +158,7 @@
     <property name="height">200</property>
     <property name="modal">true</property>
     <property name="resizable">none</property>
-    <property name="title" translatable="yes">About the FXPQuest Editor</property>
+    <property name="title" translatable="yes">About FXPQuest Editor</property>
     <property name="width">400</property>
     <child>
       <object class="ttk.Label" id="Label_AboutTitle">
@@ -207,40 +209,52 @@
     </child>
   </object>
   <object class="pygubu.builder.widgets.dialog" id="Dialog_NewFile">
-    <property name="borderwidth">20</property>
+    <property name="borderwidth">10</property>
     <property name="height">200</property>
     <property name="modal">true</property>
     <property name="width">400</property>
     <child>
       <object class="ttk.Frame" id="Frame_NewFile">
         <property name="height">200</property>
+        <property name="padding">10</property>
         <property name="width">400</property>
         <layout>
           <property name="column">0</property>
-          <property name="columnspan">2</property>
           <property name="propagate">True</property>
           <property name="row">0</property>
         </layout>
       </object>
     </child>
     <child>
-      <object class="ttk.Button" id="Button_NewFile_Cancel">
-        <property name="text" translatable="yes">Cancel</property>
+      <object class="ttk.Frame" id="Frame_NewFile_Buttons">
+        <property name="height">200</property>
+        <property name="width">200</property>
         <layout>
           <property name="column">0</property>
           <property name="propagate">True</property>
-          <property name="row">1</property>
+          <property name="row">2</property>
+          <property name="sticky">e</property>
         </layout>
-      </object>
-    </child>
-    <child>
-      <object class="ttk.Button" id="Button_NewFile_Create">
-        <property name="text" translatable="yes">Create</property>
-        <layout>
-          <property name="column">1</property>
-          <property name="propagate">True</property>
-          <property name="row">1</property>
-        </layout>
+        <child>
+          <object class="ttk.Button" id="Button_NewFile_Cancel">
+            <property name="text" translatable="yes">Cancel</property>
+            <layout>
+              <property name="column">1</property>
+              <property name="propagate">True</property>
+              <property name="row">0</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="Button_NewFile_Create">
+            <property name="text" translatable="yes">Create</property>
+            <layout>
+              <property name="column">0</property>
+              <property name="propagate">True</property>
+              <property name="row">0</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
   </object>

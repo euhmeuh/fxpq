@@ -110,6 +110,9 @@ class Application(pygubu.TkApplication):
         self.set_menu(menu)
 
         builder.connect_callbacks(self)
+        self.mainwindow.bind_all("<Control-o>", self.on_open)
+        self.mainwindow.bind_all("<Control-s>", self.on_save)
+
         self._configure_menu()
         self._update_menu()
 
@@ -141,9 +144,10 @@ class Application(pygubu.TkApplication):
         button_cancel.config(command=on_cancel)
         button_create.config(command=lambda: on_create(obj_type, dialog.form.get_values()))
 
+        dialog.set_title("New {}".format(obj_type.__name__))
         dialog.run()
 
-    def on_open(self):
+    def on_open(self, event=None):
         filepath = filedialog.askopenfilename(filetypes=self.filetypes)
         if not filepath:
             return
@@ -151,7 +155,7 @@ class Application(pygubu.TkApplication):
         self.notebook.open(filepath)
         self._update_menu()
 
-    def on_save(self):
+    def on_save(self, event=None):
         fxpqtext = self.notebook.current()
         if fxpqtext.filepath:
             with open(fxpqtext.filepath, 'w') as f:
