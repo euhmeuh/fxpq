@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import pygubu
 
-from templator import Templator
+from templator import Templator, Form
 from generator import Generator
 from validator import Validator
 from texteditor import FxpqNotebook
@@ -55,9 +55,32 @@ class Application(pygubu.TkApplication):
         self._configure_menu()
 
     def on_new(self, obj_type):
-        typename = obj_type.__name__.lower()
-        text = self.templator.new(obj_type)
-        self.notebook.new(title="untitled {}".format(typename), text=text)
+        dialog = self.builder.get_object('Dialog_NewFile', self.master)
+        frame_newfile = self.builder.get_object('Frame_NewFile', self.master)
+        button_cancel = self.builder.get_object('Button_NewFile_Cancel', self.master)
+        button_create = self.builder.get_object('Button_NewFile_Create', self.master)
+
+        def on_cancel():
+            dialog.close()
+
+        def on_create(obj_type, input_values):
+            typename = obj_type.__name__.lower()
+            text = self.templator.new(obj_type, input_values)
+            self.notebook.new(title="untitled {}".format(typename), text=text)
+            dialog.close()
+
+        inputs = self.generator.get_config("inputs")
+        inputs = inputs.get(obj_type.__name__.lower(), None)
+        if not inputs:
+            on_create(obj_type, {})
+            return
+
+        dialog.form = Form(frame_newfile, button_create, inputs)
+
+        button_cancel.config(command=on_cancel)
+        button_create.config(command=lambda: on_create(obj_type, dialog.form.get_values()))
+
+        dialog.run()
 
     def on_open(self):
         filepath = filedialog.askopenfilename(
@@ -75,12 +98,12 @@ class Application(pygubu.TkApplication):
 
     def on_about(self):
         about = self.builder.get_object('Dialog_About', self.master)
-        buttonclose = self.builder.get_object('Button_AboutClose', self.master)
+        button_close = self.builder.get_object('Button_AboutClose', self.master)
 
         def on_close_about():
             about.close()
 
-        buttonclose.config(command=on_close_about)
+        button_close.config(command=on_close_about)
         about.run()
 
     def _configure_menu(self):

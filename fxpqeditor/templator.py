@@ -12,20 +12,18 @@ class Templator:
         self.templates_dir = templates_dir
         self.templates = [f for f in os.listdir(templates_dir) if path.isfile(path.join(templates_dir, f))]
 
-    def new(self, obj_type):
-        values = {}
-
+    def new(self, obj_type, input_values={}):
         typename = obj_type.__name__.lower()
         filename = next((f for f in self.templates if typename in self._find_moustaches(f)), None)
         if not filename:
             filename = path.join(self.templates_dir, r"{{object}}.fxpq")
-            values['object'] = typename
+            input_values['object'] = typename
         else:
             filename = path.join(self.templates_dir, filename)
 
         with open(filename) as f:
             text = f.read()
-            return self._replace_moustaches(text, values)
+            return self._replace_moustaches(text, input_values)
 
     def _find_moustaches(self, string):
         return re.findall(r'{{([a-zA-Z_][\w_.-]*)}}', string)
@@ -34,3 +32,15 @@ class Templator:
         for moustache in self._find_moustaches(string):
             string = string.replace(r'{{' + moustache + r'}}', dictionary.get(moustache, ""))
         return string
+
+
+class Form:
+    """Generates a user form from an input configuration"""
+
+    def __init__(self, master, button_ok, inputs):
+        self.master = master
+        self.inputs = inputs
+        self.button_ok = button_ok
+
+    def get_values(self):
+        return {}

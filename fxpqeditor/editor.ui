@@ -202,4 +202,42 @@
       </object>
     </child>
   </object>
+  <object class="pygubu.builder.widgets.dialog" id="Dialog_NewFile">
+    <property name="borderwidth">20</property>
+    <property name="height">200</property>
+    <property name="modal">true</property>
+    <property name="width">400</property>
+    <child>
+      <object class="ttk.Frame" id="Frame_NewFile">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout>
+          <property name="column">0</property>
+          <property name="columnspan">2</property>
+          <property name="propagate">True</property>
+          <property name="row">0</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Button" id="Button_NewFile_Cancel">
+        <property name="text" translatable="yes">Cancel</property>
+        <layout>
+          <property name="column">0</property>
+          <property name="propagate">True</property>
+          <property name="row">1</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Button" id="Button_NewFile_Create">
+        <property name="text" translatable="yes">Create</property>
+        <layout>
+          <property name="column">1</property>
+          <property name="propagate">True</property>
+          <property name="row">1</property>
+        </layout>
+      </object>
+    </child>
+  </object>
 </interface>
