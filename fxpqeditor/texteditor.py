@@ -66,7 +66,13 @@ class FxpqText(LiveText):
     def __init__(self, generator, validator, master=None):
         super().__init__(master)
 
-        self.filepath = ""
+        self._filepath = ""
+        self._dirty = False
+        self._ignore_next_dirty = False
+
+        self.title = ""
+        self.temptitle = "untitled"
+
         self.generator = generator
         self.validator = validator
 
@@ -78,6 +84,24 @@ class FxpqText(LiveText):
             insertbackground='white',
             selectbackground='#49483e')
         self._configure_tags()
+
+    @property
+    def filepath(self):
+        return self._filepath
+
+    @filepath.setter
+    def filepath(self, value):
+        self._filepath = value
+        self.update_title()
+
+    @property
+    def dirty(self):
+        return self._dirty
+
+    @dirty.setter
+    def dirty(self, value):
+        self._dirty = value
+        self.update_title()
 
     def on_key(self, key):
 
@@ -108,21 +132,46 @@ class FxpqText(LiveText):
         return 'break'
 
     def on_modified(self, event=None):
-        text = self.get(1.0, tk.END)
+        if self._ignore_next_dirty:
+            self._ignore_next_dirty = False
+        else:
+            self.dirty = True
+
+        text = self.get_text()
         self._remove_tags()
         self._highlight(text)
         if not self.validator.validate(text):
             self._highlight_errors(self.validator.errors)
 
+    def update_title(self):
+        title = self.temptitle
+
+        if self.filepath:
+            title = self.filepath.split('/')[-1]
+
+        if self.dirty:
+            title += "*"
+
+        self.title = title
+        self.master.master.tab(self.master, text=self.title)
+
+    def get_text(self):
+        return self.get(1.0, tk.END)
+
     def set_text(self, text):
+        self.ignore_next_dirty()
         self.delete(1.0, tk.END)
         self.insert(tk.END, text)
+        self.dirty = False
+
+    def ignore_next_dirty(self):
+        self._ignore_next_dirty = True
 
     def open(self, filepath):
         self.filepath = filepath
         with open(filepath) as f:
             text = f.read()
-            self.insert(tk.END, text)
+            self.set_text(text)
 
     def _configure_tags(self):
         for tag, val in self.tags.items():
@@ -157,15 +206,23 @@ class FxpqNotebook(ttk.Notebook):
         self.generator = generator
         self.validator = validator
 
+    def current(self):
+        if not self.index("end"):
+            return None
+        # tab content is in a scrollbarhelper, so we get its child
+        return self.winfo_children()[self.index("current")].cwidget
+
     def new(self, title="untitled", text=""):
         fxpqtext = FxpqText(self.generator, self.validator)
-        fxpqtext.set_text(text)
         self._new_tab(title, fxpqtext)
+        fxpqtext.temptitle = title
+        fxpqtext.set_text(text)
+        fxpqtext.dirty = True
 
     def open(self, filepath):
         fxpqtext = FxpqText(self.generator, self.validator)
-        fxpqtext.open(filepath)
         self._new_tab(filepath, fxpqtext)
+        fxpqtext.open(filepath)
 
     def _new_tab(self, name, element):
         scrollbar = ScrollbarHelper(master=self, scrolltype='both')

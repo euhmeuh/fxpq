@@ -13,11 +13,11 @@ from texteditor import FxpqNotebook
 
 """
 TODO:
-- Save and Save as menu
 - Custom tabs with a close button
 - Solution tree / Untracked tree
 - Right click on untracked file -> Include in dimension
 - Disable the create button in the "new file" dialog until validations are satisfied
+- Move the templates folder so that there is one in each package
 - New files saved inside the dimension folder get tracked
 
 Text editor:
@@ -77,6 +77,11 @@ class Form:
 
 
 class Application(pygubu.TkApplication):
+    filetypes = (
+        ("FXPQ file", "*.fxpq"),
+        ("FXPQ file", "*.dim"),
+        ("All files", "*.*"))
+
     def _create_ui(self):
         self.builder = builder = pygubu.Builder()
 
@@ -106,6 +111,7 @@ class Application(pygubu.TkApplication):
 
         builder.connect_callbacks(self)
         self._configure_menu()
+        self._update_menu()
 
     def on_new(self, obj_type):
         dialog = self.builder.get_object('Dialog_NewFile', self.master)
@@ -118,8 +124,9 @@ class Application(pygubu.TkApplication):
 
         def on_create(obj_type, input_values):
             typename = obj_type.__name__.lower()
-            name, text = self.templator.new(obj_type, input_values)
-            self.notebook.new(title="{}".format(name), text=text)
+            title, text = self.templator.new(obj_type, input_values)
+            self.notebook.new(title=title, text=text)
+            self._update_menu()
             dialog.close()
 
         inputs = self.packagemanager.get_config("inputs")
@@ -137,15 +144,36 @@ class Application(pygubu.TkApplication):
         dialog.run()
 
     def on_open(self):
-        filepath = filedialog.askopenfilename(
-            filetypes = (
-                ("FXPQ file", "*.fxpq"),
-                ("FXPQ file", "*.dim"),
-                ("All files", "*.*")))
+        filepath = filedialog.askopenfilename(filetypes=self.filetypes)
         if not filepath:
             return
 
         self.notebook.open(filepath)
+        self._update_menu()
+
+    def on_save(self):
+        fxpqtext = self.notebook.current()
+        if fxpqtext.filepath:
+            with open(fxpqtext.filepath, 'w') as f:
+                f.write(fxpqtext.get_text())
+                fxpqtext.dirty = False
+        else:
+            self.on_save_as()
+
+    def on_save_as(self):
+        fxpqtext = self.notebook.current()
+
+        initialfile = fxpqtext.title.replace("*", "").replace(" ", "")
+
+        filepath = filedialog.asksaveasfilename(filetypes=self.filetypes,
+            initialfile=initialfile, defaultextension=".fxpq")
+        if not filepath:
+            return
+
+        with open(filepath, 'w') as f:
+            f.write(fxpqtext.get_text())
+            fxpqtext.filepath = filepath
+            fxpqtext.dirty = False
 
     def on_quit(self):
         self.quit()
@@ -167,6 +195,12 @@ class Application(pygubu.TkApplication):
             # we capture root in the lambda closure by using default parameters
             command = lambda root=root: self.on_new(root)
             menu.add_command(label=root.__name__, command=command)
+
+    def _update_menu(self):
+        filemenu = self.builder.get_object('Submenu_File', self.master)
+        state = tk.NORMAL if self.notebook.current() else tk.DISABLED
+        filemenu.entryconfig("Save", state=state)
+        filemenu.entryconfig("Save as...", state=state)
 
 
 if __name__ == '__main__':

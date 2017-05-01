@@ -22,10 +22,10 @@ class Templator:
         with open(path.join(self.templates_dir, filename)) as f:
             text = f.read()
             result_text = self._replace_moustaches(text, input_values)
-            result_name = self._replace_filename(filename, typename, input_values)
-            return result_name, result_text
+            result_title = self._format_title(filename, typename, input_values)
+            return result_title, result_text
 
-    def _replace_filename(self, filename, typename, input_values):
+    def _format_title(self, filename, typename, input_values):
         if not input_values.get("name", ""):
             return "untitled {}".format(typename)
 
