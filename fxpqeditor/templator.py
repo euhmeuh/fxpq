@@ -16,14 +16,22 @@ class Templator:
         typename = obj_type.__name__.lower()
         filename = next((f for f in self.templates if typename in self._find_moustaches(f)), None)
         if not filename:
-            filename = path.join(self.templates_dir, r"{{object}}.fxpq")
+            filename = r"{{object}}.fxpq"
             input_values['object'] = typename
-        else:
-            filename = path.join(self.templates_dir, filename)
 
-        with open(filename) as f:
+        with open(path.join(self.templates_dir, filename)) as f:
             text = f.read()
-            return self._replace_moustaches(text, input_values)
+            result_text = self._replace_moustaches(text, input_values)
+            result_name = self._replace_filename(filename, typename, input_values)
+            return result_name, result_text
+
+    def _replace_filename(self, filename, typename, input_values):
+        if not input_values.get("name", ""):
+            return "untitled {}".format(typename)
+
+        replacement = {}
+        replacement[typename] = input_values["name"]
+        return self._replace_moustaches(filename, replacement)
 
     def _find_moustaches(self, string):
         return re.findall(r'{{([a-zA-Z_][\w_.-]*)}}', string)

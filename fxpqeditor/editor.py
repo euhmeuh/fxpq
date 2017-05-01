@@ -45,6 +45,7 @@ class Form:
         or any subclass of the given base_input_type, in which case the corresponding input widget will be created.
         """
         self.inputs = inputs
+        self.base = base_input_type
 
         for widget in master.winfo_children():
             widget.destroy()
@@ -54,8 +55,8 @@ class Form:
             if isinstance(value, base_input_type):
                 label = tk.Label(master, text=name).grid(row=index, column=0)
 
-                on_modified = lambda name,index,mode,widget=stringvar,value=value: value.update(widget.get())
                 stringvar = tk.StringVar()
+                on_modified = lambda name,index,mode,widget=stringvar,value=value: value.update(widget.get())
                 stringvar.trace('w', on_modified)
 
                 widget = tk.Entry(master, textvariable=stringvar)
@@ -63,7 +64,12 @@ class Form:
 
     def get_values(self):
         try:
-            values = {name: value.validate() for name, value in self.inputs.items()}
+            values = {}
+            for name, value in self.inputs.items():
+                if isinstance(value, self.base):
+                    values[name] = value.validate()
+                else:
+                    values[name] = str(value)
         except ValueError:
             return {}
 
@@ -112,8 +118,8 @@ class Application(pygubu.TkApplication):
 
         def on_create(obj_type, input_values):
             typename = obj_type.__name__.lower()
-            text = self.templator.new(obj_type, input_values)
-            self.notebook.new(title="untitled {}".format(typename), text=text)
+            name, text = self.templator.new(obj_type, input_values)
+            self.notebook.new(title="{}".format(name), text=text)
             dialog.close()
 
         inputs = self.packagemanager.get_config("inputs")
