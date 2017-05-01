@@ -1,7 +1,7 @@
 """
 Package configuration
 
-Every variable declared here is a configuration entry.
+Every dictionary declared here is a configuration entry.
 This fxpq module also defines the base classes you can use in your configuration files.
 """
 

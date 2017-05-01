@@ -4,8 +4,9 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import pygubu
 
-from templator import Templator, Form
+from packagemanager import PackageManager
 from generator import Generator
+from templator import Templator, Form
 from validator import Validator
 from texteditor import FxpqNotebook
 
@@ -39,8 +40,13 @@ class Application(pygubu.TkApplication):
         self.panedwindow = builder.get_object('Panedwindow_Main', self.master)
         self.panedwindow.pack(fill=tk.BOTH, expand=1)
 
+        self.packagemanager = PackageManager("./packages")
+
+        # define Object as the base class for all elements
+        base_type = self.packagemanager.get_class("fxpq.core", "Object")
+        self.generator = Generator(base_type)
         self.templator = Templator("./templates")
-        self.generator = Generator("./packages")
+
         dtd = self.generator.generate()
         self.validator = Validator(dtd, "packages/fxpq/fxpq.sch")
         self.notebook = FxpqNotebook(self.generator, self.validator)
@@ -69,7 +75,7 @@ class Application(pygubu.TkApplication):
             self.notebook.new(title="untitled {}".format(typename), text=text)
             dialog.close()
 
-        inputs = self.generator.get_config("inputs")
+        inputs = self.packagemanager.get_config("inputs")
         inputs = inputs.get(obj_type.__name__.lower(), None)
         if not inputs:
             on_create(obj_type, {})

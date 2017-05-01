@@ -2,26 +2,13 @@
 Generates DTD rules from python packages
 """
 
-from pathlib import PurePath
-import pkgutil
-import importlib
-
 
 class Generator:
-    def __init__(self, packages_dir):
-        self.packages_dir = PurePath(packages_dir)
-        self.register_packages(packages_dir)
-
-        # define Object as the base class for all elements
-        from fxpq.core import Object
-        self.base = Object
-
-        self.objects = []
-        self.modules = []
+    def __init__(self, basetype):
+        self.base = basetype
+        self.objects = self.base.__subclasses__()
 
     def generate(self):
-        self._find_and_import_modules(self.packages_dir)
-
         result = []
 
         # the root fxpq element is the only python namespace to have its own element definition
@@ -44,36 +31,6 @@ class Generator:
 
     def rootobjects(self):
         return [o for o in self.objects if o.root]
-
-    def register_packages(self, directory):
-        """Allow imports from the specified directory"""
-        import sys
-        sys.path.insert(0, directory)
-
-    def get_config(self, dict_name):
-        """Get the merged dictionary of every config.py files"""
-        if not self.modules:
-            self._find_and_import_modules(self.packages_dir)
-
-        result = {}
-
-        for module in self.modules:
-            if module.__name__.endswith(".config"):
-                if hasattr(module, dict_name):
-                    result.update(getattr(module, dict_name))
-
-        return result
-
-    def _find_and_import_modules(self, pkg_dir):
-        self.object = []
-        self.modules = []
-        for importer, modname, ispkg in pkgutil.walk_packages(path=[pkg_dir]):
-            print("Found {0} {1}".format("package" if ispkg else "module", modname))
-            if not ispkg:
-                module = importlib.import_module(modname)
-                self.modules.append(module)
-
-        self.objects = self.base.__subclasses__()
 
     def _generate_element(self, klass):
         result = []
