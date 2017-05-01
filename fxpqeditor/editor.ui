@@ -210,7 +210,7 @@
     <child>
       <object class="ttk.Frame" id="Frame_NewFile">
         <property name="height">200</property>
-        <property name="width">200</property>
+        <property name="width">400</property>
         <layout>
           <property name="column">0</property>
           <property name="columnspan">2</property>

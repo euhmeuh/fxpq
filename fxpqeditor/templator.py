@@ -33,14 +33,3 @@ class Templator:
             string = string.replace(r'{{' + moustache + r'}}', dictionary.get(moustache, ""))
         return string
 
-
-class Form:
-    """Generates a user form from an input configuration"""
-
-    def __init__(self, master, button_ok, inputs):
-        self.master = master
-        self.inputs = inputs
-        self.button_ok = button_ok
-
-    def get_values(self):
-        return {}

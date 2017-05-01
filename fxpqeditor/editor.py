@@ -6,7 +6,7 @@ import pygubu
 
 from packagemanager import PackageManager
 from generator import Generator
-from templator import Templator, Form
+from templator import Templator
 from validator import Validator
 from texteditor import FxpqNotebook
 
@@ -16,17 +16,58 @@ TODO:
 - Save and Save as menu
 - Custom tabs with a close button
 - Solution tree / Untracked tree
-- New files saved inside the dimension folder get tracked
 - Right click on untracked file -> Include in dimension
+- Disable the create button in the "new file" dialog until validations are satisfied
+- New files saved inside the dimension folder get tracked
 
 Text editor:
 - Line numbers
-- Right click copy/cut/paste
-- Search & replace
 - Display validation errors
 - Show matching tags
 - Autocomplete class and properties
+- Right click copy/cut/paste
+- Search & replace
 """
+
+
+class Form:
+    """Generates a user form from an input configuration"""
+
+    def __init__(self, master, button, inputs, base_input_type):
+        """
+        master: the tk.Frame in which the form should generate inputs
+        button: the tk.Button that sends the form (will be disabled by validations)
+        inputs: the dictionary of inputs
+        base_input_type: the base class to look for in the inputs dictionary
+
+        The keys in the inputs dictionary will be used as the input's labels.
+        The values can be either a simple string, in which case they will be considered as hidden fields,
+        or any subclass of the given base_input_type, in which case the corresponding input widget will be created.
+        """
+        self.inputs = inputs
+
+        for widget in master.winfo_children():
+            widget.destroy()
+
+        for index, kv in enumerate(inputs.items()):
+            name, value = kv
+            if isinstance(value, base_input_type):
+                label = tk.Label(master, text=name).grid(row=index, column=0)
+
+                on_modified = lambda name,index,mode,widget=stringvar,value=value: value.update(widget.get())
+                stringvar = tk.StringVar()
+                stringvar.trace('w', on_modified)
+
+                widget = tk.Entry(master, textvariable=stringvar)
+                widget.grid(row=index, column=1)
+
+    def get_values(self):
+        try:
+            values = {name: value.validate() for name, value in self.inputs.items()}
+        except ValueError:
+            return {}
+
+        return values
 
 
 class Application(pygubu.TkApplication):
@@ -81,7 +122,8 @@ class Application(pygubu.TkApplication):
             on_create(obj_type, {})
             return
 
-        dialog.form = Form(frame_newfile, button_create, inputs)
+        base_input_type = self.packagemanager.get_class("fxpq.config", "Input")
+        dialog.form = Form(frame_newfile, button_create, inputs, base_input_type)
 
         button_cancel.config(command=on_cancel)
         button_create.config(command=lambda: on_create(obj_type, dialog.form.get_values()))

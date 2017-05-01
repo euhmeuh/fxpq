@@ -13,23 +13,26 @@ class Input:
     def __init__(self):
         self.value = ""
 
+    def update(self, value):
+        self.value = value
+
     def validate(self):
         raise NotImplementedError
 
-    def __unicode__(self):
+
+class StringEntry(Input):
+    def validate(self):
         return self.value
 
 
-class StringEntry(Input):
-    pass
-
-
 class DropdownChoice(Input):
-    pass
+    def validate(self):
+        return self.value
 
 
 class DropdownCheckboxes(Input):
-    pass
+    def validate(self):
+        return self.value
 
 
 inputs = {
