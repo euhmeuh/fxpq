@@ -9,6 +9,7 @@ from generator import Generator
 from templator import Templator
 from validator import Validator
 from texteditor import FxpqNotebook
+from explorer import FxpqExplorer
 
 
 """
@@ -18,6 +19,7 @@ TODO:
 - Right click on untracked file -> Include in dimension
 - Disable the create button in the "new file" dialog until validations are satisfied
 - Move the templates folder so that there is one in each package
+- Move the icons folder so that there is one in each package
 - New files saved inside the dimension folder get tracked
 
 Text editor:
@@ -98,6 +100,10 @@ class Application(pygubu.TkApplication):
         base_type = self.packagemanager.get_class("fxpq.core", "Object")
         self.generator = Generator(base_type)
         self.templator = Templator("./templates")
+
+        self.explorer = FxpqExplorer(base_type, self.master)
+        self.pane_explorer = builder.get_object('Pane_Explorer', self.master)
+        self.pane_explorer.add(self.explorer)
 
         dtd = self.generator.generate()
         self.validator = Validator(dtd, "packages/fxpq/fxpq.sch")

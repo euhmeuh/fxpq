@@ -33,18 +33,7 @@
           <property name="row">0</property>
         </layout>
         <child>
-          <object class="ttk.Panedwindow.Pane" id="Pane_Explorer">
-            <child>
-              <object class="ttk.Treeview" id="Treeview_Explorer">
-                <property name="selectmode">extended</property>
-                <layout>
-                  <property name="column">0</property>
-                  <property name="propagate">True</property>
-                  <property name="row">0</property>
-                </layout>
-              </object>
-            </child>
-          </object>
+          <object class="ttk.Panedwindow.Pane" id="Pane_Explorer" />
         </child>
         <child>
           <object class="ttk.Panedwindow.Pane" id="Pane_Editor" />
