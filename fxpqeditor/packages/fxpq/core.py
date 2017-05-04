@@ -17,13 +17,14 @@ class Property:
         self.type = content_type if isinstance(content_type, type) else type(content_type)
         self.quantity = quantity
         self.required = required
-        self.default_value = default_value
 
         if isinstance(content_type, type):
             self.value = default_value
+            self.default_value = default_value
         else:
             # the default value for a primitive type is the given value
             self.value = content_type
+            self.default_value = content_type
 
 
 class Object:
@@ -41,7 +42,12 @@ class Object:
     def act(self, delta_time):
         raise NotImplementedError
 
+    def get_properties(self):
+        """Get the properties of the current instance"""
+        return {k: v for k, v in vars(self).items() if isinstance(v, Property)}
+
     @classmethod
     def properties(cls):
+        """Get a dictionary of all the Property variables defined in this class"""
         return {k: v for k, v in vars(cls()).items() if isinstance(v, Property)}
 

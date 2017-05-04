@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import pygubu
 
-from packagemanager import PackageManager
+from package_manager import PackageManager
 from generator import Generator
 from templator import Templator
 from validator import Validator
@@ -94,14 +94,13 @@ class Application(pygubu.TkApplication):
         self.panedwindow = builder.get_object('Panedwindow_Main', self.master)
         self.panedwindow.pack(fill=tk.BOTH, expand=1)
 
-        self.packagemanager = PackageManager("./packages")
+        self.package_manager = PackageManager("./packages")
 
         # define Object as the base class for all elements
-        base_type = self.packagemanager.get_class("fxpq.core", "Object")
-        self.generator = Generator(base_type)
+        self.generator = Generator(self.package_manager)
         self.templator = Templator("./templates")
 
-        self.explorer = FxpqExplorer(base_type, self.master)
+        self.explorer = FxpqExplorer(self.package_manager, self.master)
         self.pane_explorer = builder.get_object('Pane_Explorer', self.master)
         self.pane_explorer.add(self.explorer)
 
@@ -138,13 +137,13 @@ class Application(pygubu.TkApplication):
             self._update_menu()
             dialog.close()
 
-        inputs = self.packagemanager.get_config("inputs")
+        inputs = self.package_manager.get_config("inputs")
         inputs = inputs.get(obj_type.__name__.lower(), None)
         if not inputs:
             on_create(obj_type, {})
             return
 
-        base_input_type = self.packagemanager.get_class("fxpq.config", "Input")
+        base_input_type = self.package_manager.get_class("fxpq.config", "Input")
         dialog.form = Form(frame_newfile, button_create, inputs, base_input_type)
 
         button_cancel.config(command=on_cancel)

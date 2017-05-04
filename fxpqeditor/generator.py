@@ -2,10 +2,12 @@
 Generates DTD rules from python packages
 """
 
+from tools import isprimitive
+
 
 class Generator:
-    def __init__(self, basetype):
-        self.base = basetype
+    def __init__(self, packagemanager):
+        self.base = packagemanager.get_class("fxpq.core", "Object")
         self.objects = self.base.__subclasses__()
 
     def generate(self):
@@ -59,7 +61,7 @@ class Generator:
             if prop.type == self.base:
                 return "ANY"
 
-            if prop.type in [type(""), type(1), type(1.0), type(True)]:
+            if isprimitive(prop.type):
                 children_type = primitive_type
             else:
                 children_type = self._format_name(prop.type)
