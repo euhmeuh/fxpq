@@ -29,6 +29,7 @@ Text editor:
 - Autocomplete class and properties
 - Right click copy/cut/paste
 - Search & replace
+- Smart tabs
 """
 
 
