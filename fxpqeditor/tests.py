@@ -23,10 +23,11 @@ class SerializerTests(unittest.TestCase):
             '<fxpq version="1.0">'\
             '<dimension cellsize="16" display_name="My Favorite Dimension">'\
             '<dimension.changelog><change version="0.1">We did some stuff, I think..</change>'\
-            '<change version="0.2">We did some stuff, I think..</change>'\
+            '<change breaking="True" version="0.2">We did some stuff, I think..</change>'\
             '<change version="0.3">We did some stuff, I think..</change>'\
             '</dimension.changelog><dimension.authors><author>Jean Rochefort</author>'\
             '<author>Jean Rochefort</author></dimension.authors></dimension></fxpq>'
+        cls.maxDiff = None
 
     def test_serialize_dimension(self):
         obj = SerializerTests.Dimension()
@@ -42,10 +43,24 @@ class SerializerTests(unittest.TestCase):
 
         self.assertEqual(dimension.display_name.value, "My Favorite Dimension")
         self.assertEqual(dimension.cellsize.value, 16)
-        self.assertEqual(dimension.changelog.value, list(SerializerTests._sample_changes(3)))
-        self.assertEqual(dimension.authors.value, list(SerializerTests._sample_authors(2)))
 
-    def test_raises_if_no_packagemanager(self):
+        sample_changes = list(SerializerTests._sample_changes(3))
+        sample_authors = list(SerializerTests._sample_authors(2))
+
+        self.assertListEqual([c.children.value for c in dimension.changelog.value],
+            [c.children.value for c in sample_changes])
+        self.assertListEqual([a.children.value for a in dimension.authors.value],
+            [a.children.value for a in sample_authors])
+
+        for i, change in enumerate(dimension.changelog.value):
+            self.assertListEqual([p.value for p in change.get_properties().values()],
+                [p.value for p in sample_changes[i].get_properties().values()])
+
+        for i, author in enumerate(dimension.authors.value):
+            self.assertListEqual([p.value for p in author.get_properties().values()],
+                [p.value for p in sample_authors[i].get_properties().values()])
+
+    def test_raises_if_no_package_manager(self):
         pm = Serializer.package_manager
         Serializer.package_manager = None
 
@@ -60,6 +75,7 @@ class SerializerTests(unittest.TestCase):
             change = cls.Change()
             change.version.value = "0.{}".format(i)
             change.children.value = "We did some stuff, I think.."
+            change.breaking.value = (i % 2 == 0)
             yield change
 
     @classmethod

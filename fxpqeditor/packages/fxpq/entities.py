@@ -2,7 +2,7 @@
 Basic entities used in all fxpq files
 """
 
-from fxpq.core import Object, Property, Quantity
+from fxpq.core import Object, Property
 
 
 class Reference(Object):

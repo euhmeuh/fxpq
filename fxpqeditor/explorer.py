@@ -5,10 +5,9 @@ The solution explorer that reads and display the content of a dimension
 import tkinter as tk
 from tkinter import ttk
 
-from serializer import Serializer
 
 class FxpqExplorer(ttk.Treeview):
-    def __init__(self, package_manager, master=None):
+    def __init__(self, master=None):
         super().__init__(master)
 
         self.images = {
@@ -27,10 +26,6 @@ class FxpqExplorer(ttk.Treeview):
         self.insert(golfia, "end", text="Home", values=("Object",), image=self.images['object'])
         self.insert(golfia, "end", text="Tree", values=("Object",), image=self.images['object'])
 
-        # initialize the serializer
-        Serializer.package_manager = package_manager
-
     def update(self, current_file):
         """Update the treeview depending on the currently edited file"""
-
-
+        pass

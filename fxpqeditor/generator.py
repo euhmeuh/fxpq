@@ -2,20 +2,20 @@
 Generates DTD rules from python packages
 """
 
-from tools import isprimitive
+from tools import is_primitive
 
 
 class Generator:
-    def __init__(self, packagemanager):
-        self.base = packagemanager.get_class("fxpq.core", "Object")
-        self.objects = self.base.__subclasses__()
+    def __init__(self, package_manager):
+        self.Object = package_manager.get_class("fxpq.core", "Object")
+        self.objects = self.Object.__subclasses__()
 
     def generate(self):
         result = []
 
         # the root fxpq element is the only python namespace to have its own element definition
         fxpq_element = "<!ELEMENT fxpq ({0})>".format(" | ".join(
-            [c.__name__.lower() for c in self.rootobjects()]))
+            [c.__name__.lower() for c in self.root_objects()]))
         result.append(fxpq_element)
 
         # it also have an attribute list with a version and all the xmlns definitions of other packages
@@ -31,25 +31,25 @@ class Generator:
 
         return "\n".join(result)
 
-    def rootobjects(self):
+    def root_objects(self):
         return [o for o in self.objects if o.root]
 
-    def _generate_element(self, klass):
+    def _generate_element(self, class_):
         result = []
-        element_name = self._format_name(klass)
+        element_name = self._format_name(class_)
 
-        children = self._generate_children(klass.children, klass)
+        children = self._generate_children(class_.children, class_)
         element = "<!ELEMENT {0} {1}>".format(element_name, children)
         result.append(element)
 
-        attributes = self._generate_attributes(klass)
+        attributes = self._generate_attributes(class_)
         result.extend(attributes)
 
         return result
 
-    def _generate_children(self, prop, klass=None):
+    def _generate_children(self, prop, class_=None):
         """Generate allowed children based on a Property
-           If you specify the @klass attribute, it'll also allow attribute elements first:
+           If you specify the @class_ attribute, it'll also allow attribute elements first:
            ((attribute_elements)*, (prop.type)prop.quantity)
         """
         primitive_type = "#PCDATA"
@@ -58,10 +58,10 @@ class Generator:
         attribute_elements = []
 
         if prop:
-            if prop.type == self.base:
+            if prop.type == self.Object:
                 return "ANY"
 
-            if isprimitive(prop.type):
+            if is_primitive(prop.type):
                 children_type = primitive_type
             else:
                 children_type = self._format_name(prop.type)
@@ -70,9 +70,9 @@ class Generator:
                 if prop.type.root:
                     children_type = children_type + " | reference"
 
-        if klass:
-            element_name = self._format_name(klass)
-            for name in klass.properties().keys():
+        if class_:
+            element_name = self._format_name(class_)
+            for name in class_.properties().keys():
                 attribute_elements.append("{0}.{1}".format(element_name, name))
 
         if not children_type and not attribute_elements:
@@ -97,35 +97,35 @@ class Generator:
         # both properties and children are specific types
         return "(({0})*, ({1}){2})".format(" | ".join(attribute_elements), children_type, prop.quantity.value)
 
-    def _generate_attributes(self, klass):
+    def _generate_attributes(self, class_):
         result = []
-        element_name = self._format_name(klass)
-        properties = klass.properties()
+        element_name = self._format_name(class_)
+        properties = class_.properties()
         if not properties:
             return result
 
-        rules = self._generate_attribute_rules(klass)
+        rules = self._generate_attribute_rules(class_)
         attlist = "<!ATTLIST {0}\n\t{1}\n>".format(element_name, "\n\t".join(rules))
         result.append(attlist)
 
         for name, prop in properties.items():
-            att_element = self._generate_attribute_element(klass, name, prop)
+            att_element = self._generate_attribute_element(class_, name, prop)
             result.append(att_element)
 
         return result
 
-    def _generate_attribute_rules(self, klass):
-        for name in klass.properties().keys():
+    def _generate_attribute_rules(self, class_):
+        for name in class_.properties().keys():
             yield "{0}\tCDATA\t#IMPLIED".format(name)
 
-    def _generate_attribute_element(self, klass, name, prop):
-        element_name = self._format_name(klass)
+    def _generate_attribute_element(self, class_, name, prop):
+        element_name = self._format_name(class_)
         children = self._generate_children(prop)
         return "<!ELEMENT {0}.{1} {2}>".format(element_name, name, children)
 
-    def _format_name(self, klass):
-        namespace = self._get_namespace(klass)
-        element_name = klass.__name__.lower()
+    def _format_name(self, class_):
+        namespace = self._get_namespace(class_)
+        element_name = class_.__name__.lower()
 
         # elements that are not part of the fxpq namespace
         # must be prefixed with their respective namespace
@@ -134,5 +134,5 @@ class Generator:
 
         return element_name
 
-    def _get_namespace(self, klass):
-        return klass.__module__.split(".")[0]
+    def _get_namespace(self, class_):
+        return class_.__module__.split(".")[0]

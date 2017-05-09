@@ -9,6 +9,7 @@ from tkinter import ttk
 
 from pygubu.builder.widgets.scrollbarhelper import ScrollbarHelper
 
+from serializer import Serializer
 from tools import partition
 
 
@@ -63,7 +64,7 @@ class FxpqText(LiveText):
         'cdata': r'(<!\[CDATA\[.*?\]\]>)',
     }
 
-    def __init__(self, generator, validator, master=None):
+    def __init__(self, master=None):
         super().__init__(master)
 
         self._filepath = ""
@@ -73,8 +74,7 @@ class FxpqText(LiveText):
         self.title = ""
         self.temptitle = "untitled"
 
-        self.generator = generator
-        self.validator = validator
+        self.validator = Serializer.instance().validator
 
         self.bind('<Key>', self.on_key)
         self.bind("<Tab>", self.on_tab)
@@ -201,11 +201,6 @@ class FxpqText(LiveText):
 class FxpqNotebook(ttk.Notebook):
     """The main document manager of the fxpq editor"""
 
-    def __init__(self, generator, validator, master=None):
-        super().__init__(master)
-        self.generator = generator
-        self.validator = validator
-
     def current(self):
         if not self.index("end"):
             return None
@@ -213,14 +208,14 @@ class FxpqNotebook(ttk.Notebook):
         return self.winfo_children()[self.index("current")].cwidget
 
     def new(self, title="untitled", text=""):
-        fxpqtext = FxpqText(self.generator, self.validator)
+        fxpqtext = FxpqText()
         self._new_tab(title, fxpqtext)
         fxpqtext.temptitle = title
         fxpqtext.set_text(text)
         fxpqtext.dirty = True
 
     def open(self, filepath):
-        fxpqtext = FxpqText(self.generator, self.validator)
+        fxpqtext = FxpqText()
         self._new_tab(filepath, fxpqtext)
         fxpqtext.open(filepath)
 

@@ -6,6 +6,8 @@ from pathlib import PurePath
 import pkgutil
 import importlib
 
+from serializer import Serializer
+
 
 class PackageManager:
     def __init__(self, packages_dir):
@@ -14,6 +16,9 @@ class PackageManager:
 
         self.modules = []
         self._find_and_import_modules(self.packages_dir)
+
+        # initialize the serializer
+        Serializer.package_manager = self
 
     def register_packages(self, directory):
         """Allow imports from the specified directory"""
@@ -55,6 +60,9 @@ class PackageManager:
             result.update(variable)
 
         return result
+
+    def get_path(self, path):
+        return str(self.packages_dir / path)
 
     def _find_and_import_modules(self, pkg_dir):
         self.modules = []

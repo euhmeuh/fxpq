@@ -1,13 +1,12 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import filedialog
 import pygubu
 
 from package_manager import PackageManager
-from generator import Generator
 from templator import Templator
-from validator import Validator
+from serializer import Serializer
 from texteditor import FxpqNotebook
 from explorer import FxpqExplorer
 
@@ -36,26 +35,25 @@ Text editor:
 class Form:
     """Generates a user form from an input configuration"""
 
-    def __init__(self, master, button, inputs, base_input_type):
+    def __init__(self, package_manager, master, button, inputs):
         """
         master: the tk.Frame in which the form should generate inputs
         button: the tk.Button that sends the form (will be disabled by validations)
         inputs: the dictionary of inputs
-        base_input_type: the base class to look for in the inputs dictionary
 
         The keys in the inputs dictionary will be used as the input's labels.
         The values can be either a simple string, in which case they will be considered as hidden fields,
-        or any subclass of the given base_input_type, in which case the corresponding input widget will be created.
+        or any subclass of Input, in which case the corresponding input widget will be created.
         """
+        self.Input = package_manager.get_class("fxpq.config", "Input")
         self.inputs = inputs
-        self.base = base_input_type
 
         for widget in master.winfo_children():
             widget.destroy()
 
         for index, kv in enumerate(inputs.items()):
             name, value = kv
-            if isinstance(value, base_input_type):
+            if isinstance(value, self.Input):
                 label = tk.Label(master, text=name).grid(row=index, column=0)
 
                 stringvar = tk.StringVar()
@@ -69,7 +67,7 @@ class Form:
         try:
             values = {}
             for name, value in self.inputs.items():
-                if isinstance(value, self.base):
+                if isinstance(value, self.Input):
                     values[name] = value.validate()
                 else:
                     values[name] = str(value)
@@ -96,18 +94,13 @@ class Application(pygubu.TkApplication):
         self.panedwindow.pack(fill=tk.BOTH, expand=1)
 
         self.package_manager = PackageManager("./packages")
-
-        # define Object as the base class for all elements
-        self.generator = Generator(self.package_manager)
         self.templator = Templator("./templates")
 
-        self.explorer = FxpqExplorer(self.package_manager, self.master)
+        self.explorer = FxpqExplorer(self.master)
         self.pane_explorer = builder.get_object('Pane_Explorer', self.master)
         self.pane_explorer.add(self.explorer)
 
-        dtd = self.generator.generate()
-        self.validator = Validator(dtd, "packages/fxpq/fxpq.sch")
-        self.notebook = FxpqNotebook(self.generator, self.validator)
+        self.notebook = FxpqNotebook(self.master)
 
         self.pane_editor = builder.get_object('Pane_Editor', self.master)
         self.pane_editor.add(self.notebook)
@@ -132,7 +125,6 @@ class Application(pygubu.TkApplication):
             dialog.close()
 
         def on_create(obj_type, input_values):
-            typename = obj_type.__name__.lower()
             title, text = self.templator.new(obj_type, input_values)
             self.notebook.new(title=title, text=text)
             self._update_menu()
@@ -144,8 +136,7 @@ class Application(pygubu.TkApplication):
             on_create(obj_type, {})
             return
 
-        base_input_type = self.package_manager.get_class("fxpq.config", "Input")
-        dialog.form = Form(frame_newfile, button_create, inputs, base_input_type)
+        dialog.form = Form(self.package_manager, frame_newfile, button_create, inputs)
 
         button_cancel.config(command=on_cancel)
         button_create.config(command=lambda: on_create(obj_type, dialog.form.get_values()))
@@ -201,7 +192,7 @@ class Application(pygubu.TkApplication):
     def _configure_menu(self):
         menu = self.builder.get_object('Submenu_New', self.master)
 
-        for root in self.generator.rootobjects():
+        for root in Serializer.instance().generator.root_objects():
             # we capture root in the lambda closure by using default parameters
             command = lambda root=root: self.on_new(root)
             menu.add_command(label=root.__name__, command=command)

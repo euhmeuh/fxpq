@@ -2,11 +2,12 @@
 Validates XML files against DTD and schematron rules
 """
 
-import re
 from io import StringIO
 
 from lxml import etree
 from lxml import isoschematron
+
+from tools import remove_encoding_tag
 
 
 class Error:
@@ -34,14 +35,15 @@ class Validator:
         self.dtd = etree.DTD(StringIO(dtd_string))
 
         schematron_doc = etree.parse(schematron_path)
-        self.schematron = isoschematron.Schematron(schematron_doc, store_report = True)
+        self.schematron = isoschematron.Schematron(schematron_doc, store_report=True)
 
         self.errors = []
 
     def validate(self, xml_string):
         self.errors = []
 
-        xml_string = self._remove_encoding_tag(xml_string)
+        # remove encoding tag because lxml won't accept it for unicode objects
+        xml_string = remove_encoding_tag(xml_string)
 
         try:
             root = etree.fromstring(xml_string)
@@ -70,11 +72,3 @@ class Validator:
             errors.append(error)
 
         return errors
-
-    def _remove_encoding_tag(self, string):
-        # remove encoding tag because lxml won't accept it for unicode objects
-        if string.startswith('<?'):
-            # we replace the line with a line feed so that the line numbers don't change
-            string = re.sub(r'^<\?.*?\?>', '', string, flags=re.DOTALL)
-
-        return string

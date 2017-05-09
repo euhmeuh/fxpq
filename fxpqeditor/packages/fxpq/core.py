@@ -26,6 +26,9 @@ class Property:
             self.value = content_type
             self.default_value = content_type
 
+    def is_default(self):
+        return (self.value == self.default_value)
+
 
 class Object:
     """Abstract base of all FXPQuest objects"""
@@ -50,4 +53,3 @@ class Object:
     def properties(cls):
         """Get a dictionary of all the Property variables defined in this class"""
         return {k: v for k, v in vars(cls()).items() if isinstance(v, Property)}
-

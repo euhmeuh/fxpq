@@ -40,4 +40,3 @@ class Templator:
         for moustache in self._find_moustaches(string):
             string = string.replace(r'{{' + moustache + r'}}', dictionary.get(moustache, ""))
         return string
-
