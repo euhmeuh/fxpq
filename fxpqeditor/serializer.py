@@ -5,7 +5,7 @@ Serialize from and to XML
 from lxml import etree
 
 from generator import Generator
-from validator import Validator
+from validator import Validator, Error
 from tools import is_primitive, remove_encoding_tag, bool_from_string
 
 
@@ -21,6 +21,7 @@ class Serializer:
         self.Reference = self.package_manager.get_class("fxpq.entities", "Reference")
 
         self.objects = self.Object.__subclasses__()
+        self.errors = []
 
         self.generator = Generator(self.package_manager)
         dtd = self.generator.generate()
@@ -45,10 +46,13 @@ class Serializer:
         return result.format(document)
 
     def deserialize(self, xml_string):
+        self.errors = []
+
         # Most of the potential errors that the serializer would have faced are
         # already handled by the validator. Hence, the serializer's code
         # assumes most of the data to be correct after this point.
         if not self.validator.validate(xml_string):
+            self.errors.extend(self.validator.errors)
             raise ValueError("The given xml string is not a valid FXPQ file.")
 
         root = etree.fromstring(remove_encoding_tag(xml_string),
@@ -65,8 +69,8 @@ class Serializer:
         for attrib_elt, prop in attrib_elts.items():
             xml_attrib_elt = etree.SubElement(xml_elt, attrib_elt)
             self._serialize_property_value(xml_attrib_elt, prop)
-
-        self._serialize_property_value(xml_elt, obj.children)
+        if obj.children:
+            self._serialize_property_value(xml_elt, obj.children)
 
     def _serialize_attributes(self, obj):
         inline_attribs = {}
@@ -91,7 +95,7 @@ class Serializer:
             xml_elt.text = str(prop.value)
             return
 
-        if prop.quantity in (self.Quantity.ZeroOrMore, self.Quantity.OneOrMore):
+        if prop.is_many():
             for value in prop.value:
                 self._serialize_object(xml_elt, value)
         else:
@@ -147,7 +151,7 @@ class Serializer:
             self._parse_primitive_value(prop, self._get_text(xml_elt))
             return
 
-        if prop.quantity in (self.Quantity.ZeroOrMore, self.Quantity.OneOrMore):
+        if prop.is_many():
             for xml_child in xml_elt:
                 obj_child = self._deserialize_object(xml_child)
                 if not prop.value:

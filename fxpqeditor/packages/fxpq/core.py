@@ -26,6 +26,9 @@ class Property:
             self.value = content_type
             self.default_value = content_type
 
+    def is_many(self):
+        return (self.quantity in (Quantity.OneOrMore, Quantity.ZeroOrMore))
+
     def is_default(self):
         return (self.value == self.default_value)
 

@@ -14,9 +14,11 @@ class SerializerTests(unittest.TestCase):
     def setUpClass(cls):
         pm = PackageManager("./packages")
         Serializer.package_manager = pm
+        cls.Zone = pm.get_class("fxpq.roots", "Zone")
         cls.Dimension = pm.get_class("fxpq.roots", "Dimension")
         cls.Change = pm.get_class("fxpq.entities", "Change")
         cls.Author = pm.get_class("fxpq.entities", "Author")
+        cls.Rectangle = pm.get_class("fxpq.entities", "Rectangle")
 
         cls.xmldimension = '<?xml version="1.0" encoding="UTF-8"?>\n'\
             '<!DOCTYPE fxpq>\n'\
@@ -26,7 +28,8 @@ class SerializerTests(unittest.TestCase):
             '<change breaking="True" version="0.2">We did some stuff, I think..</change>'\
             '<change version="0.3">We did some stuff, I think..</change>'\
             '</dimension.changelog><dimension.authors><author>Jean Rochefort</author>'\
-            '<author>Jean Rochefort</author></dimension.authors></dimension></fxpq>'
+            '<author>Jean Rochefort</author></dimension.authors><zone><zone.rectangles>'\
+            '<rectangle h="1" w="1"/></zone.rectangles></zone></dimension></fxpq>'
         cls.maxDiff = None
 
     def test_serialize_dimension(self):
@@ -35,6 +38,7 @@ class SerializerTests(unittest.TestCase):
         obj.cellsize.value = 16
         obj.changelog.value = list(SerializerTests._sample_changes(3))
         obj.authors.value = list(SerializerTests._sample_authors(2))
+        obj.children.value = list(SerializerTests._sample_zones(1))
 
         self.assertEqual(Serializer.instance().serialize(obj), SerializerTests.xmldimension)
 
@@ -46,11 +50,14 @@ class SerializerTests(unittest.TestCase):
 
         sample_changes = list(SerializerTests._sample_changes(3))
         sample_authors = list(SerializerTests._sample_authors(2))
+        sample_zones = list(SerializerTests._sample_zones(1))
 
         self.assertListEqual([c.children.value for c in dimension.changelog.value],
             [c.children.value for c in sample_changes])
         self.assertListEqual([a.children.value for a in dimension.authors.value],
             [a.children.value for a in sample_authors])
+        self.assertListEqual([z.rectangles.value[0].w.value for z in dimension.children.value],
+            [z.rectangles.value[0].w.value for z in sample_zones])
 
         for i, change in enumerate(dimension.changelog.value):
             self.assertListEqual([p.value for p in change.get_properties().values()],
@@ -84,6 +91,15 @@ class SerializerTests(unittest.TestCase):
             author = cls.Author()
             author.children.value = "Jean Rochefort"
             yield author
+
+    @classmethod
+    def _sample_zones(cls, amount):
+        for i in range(1, amount + 1):
+            zone = cls.Zone()
+            rect = cls.Rectangle()
+            rect.w.value, rect.h.value = 1, 1
+            zone.rectangles.value = [rect]
+            yield zone
 
 
 if __name__ == "__main__":

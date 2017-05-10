@@ -151,6 +151,7 @@ class Application(pygubu.TkApplication):
 
         self.notebook.open(filepath)
         self._update_menu()
+        self._update_explorer()
 
     def on_save(self, event=None):
         fxpqtext = self.notebook.current()
@@ -160,6 +161,8 @@ class Application(pygubu.TkApplication):
                 fxpqtext.dirty = False
         else:
             self.on_save_as()
+
+        self._update_explorer()
 
     def on_save_as(self):
         fxpqtext = self.notebook.current()
@@ -175,6 +178,8 @@ class Application(pygubu.TkApplication):
             f.write(fxpqtext.get_text())
             fxpqtext.filepath = filepath
             fxpqtext.dirty = False
+
+        self._update_explorer()
 
     def on_quit(self):
         self.quit()
@@ -202,6 +207,9 @@ class Application(pygubu.TkApplication):
         state = tk.NORMAL if self.notebook.current() else tk.DISABLED
         filemenu.entryconfig("Save", state=state)
         filemenu.entryconfig("Save as...", state=state)
+
+    def _update_explorer(self):
+        self.explorer.refresh(self.notebook.get_objects())
 
 
 if __name__ == '__main__':

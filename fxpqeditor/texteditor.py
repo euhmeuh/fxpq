@@ -67,14 +67,15 @@ class FxpqText(LiveText):
     def __init__(self, master=None):
         super().__init__(master)
 
+        self.serializer = Serializer.instance()
+        self.obj = None
+
         self._filepath = ""
         self._dirty = False
         self._ignore_next_dirty = False
 
         self.title = ""
         self.temptitle = "untitled"
-
-        self.validator = Serializer.instance().validator
 
         self.bind('<Key>', self.on_key)
         self.bind("<Tab>", self.on_tab)
@@ -140,8 +141,12 @@ class FxpqText(LiveText):
         text = self.get_text()
         self._remove_tags()
         self._highlight(text)
-        if not self.validator.validate(text):
-            self._highlight_errors(self.validator.errors)
+
+        try:
+            self.obj = self.serializer.deserialize(text)
+        except ValueError:
+            self.obj = None
+            self._highlight_errors(self.serializer.errors)
 
     def update_title(self):
         title = self.temptitle
@@ -201,6 +206,11 @@ class FxpqText(LiveText):
 class FxpqNotebook(ttk.Notebook):
     """The main document manager of the fxpq editor"""
 
+    def __init__(self, master=None):
+        super().__init__(master)
+
+        self.documents = []
+
     def current(self):
         if not self.index("end"):
             return None
@@ -219,9 +229,13 @@ class FxpqNotebook(ttk.Notebook):
         self._new_tab(filepath, fxpqtext)
         fxpqtext.open(filepath)
 
+    def get_objects(self):
+        return [doc.obj for doc in self.documents if doc.obj]
+
     def _new_tab(self, name, element):
         scrollbar = ScrollbarHelper(master=self, scrolltype='both')
         scrollbar.add_child(element)
         element.master = scrollbar
         self.add(scrollbar, text=name)
         self.select(scrollbar)
+        self.documents.append(element)
