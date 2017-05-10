@@ -96,7 +96,7 @@ class Application(pygubu.TkApplication):
         self.package_manager = PackageManager("./packages")
         self.templator = Templator("./templates")
 
-        self.explorer = FxpqExplorer(self.master)
+        self.explorer = FxpqExplorer(self.package_manager, self.master)
         self.pane_explorer = builder.get_object('Pane_Explorer', self.master)
         self.pane_explorer.add(self.explorer)
 

@@ -49,6 +49,9 @@ class Object:
         """Get the properties of the current instance"""
         return {k: v for k, v in vars(self).items() if isinstance(v, Property)}
 
+    def class_name(self):
+        return self.__class__.__name__
+
     @classmethod
     def properties(cls):
         """Get a dictionary of all the Property variables defined in this class"""

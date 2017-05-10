@@ -18,6 +18,7 @@ class Serializer:
     def __init__(self):
         self.Object = self.package_manager.get_class("fxpq.core", "Object")
         self.Quantity = self.package_manager.get_class("fxpq.core", "Quantity")
+        self.Reference = self.package_manager.get_class("fxpq.entities", "Reference")
 
         self.objects = self.Object.__subclasses__()
 
@@ -44,19 +45,20 @@ class Serializer:
         return result.format(document)
 
     def deserialize(self, xml_string):
-        root = etree.XML(remove_encoding_tag(xml_string))
-
         # Most of the potential errors that the serializer would have faced are
         # already handled by the validator. Hence, the serializer's code
         # assumes most of the data to be correct after this point.
         if not self.validator.validate(xml_string):
             raise ValueError("The given xml string is not a valid FXPQ file.")
 
+        root = etree.fromstring(remove_encoding_tag(xml_string),
+            parser=etree.XMLParser(remove_comments=True))
+
         # fxpq files always have one child in the root
         return self._deserialize_object(root[0])
 
     def _serialize_object(self, xml_root, obj):
-        name = obj.__class__.__name__.lower()
+        name = obj.class_name().lower()
         attribs, attrib_elts = self._serialize_attributes(obj)
         xml_elt = etree.SubElement(xml_root, name, attrib=attribs)
 
@@ -76,7 +78,7 @@ class Serializer:
             if is_primitive(prop.type):
                 inline_attribs[name] = str(prop.value)
             else:
-                elt_name = "{0}.{1}".format(obj.__class__.__name__.lower(), name)
+                elt_name = "{0}.{1}".format(obj.class_name().lower(), name)
                 attribute_elts[elt_name] = prop
 
         return inline_attribs, attribute_elts
@@ -96,11 +98,12 @@ class Serializer:
             self._serialize_object(xml_elt, prop.value)
 
     def _deserialize_object(self, xml_elt):
-        class_name = xml_elt.tag.title().replace("_", "")
+        tag = etree.QName(xml_elt.tag)
+        class_name = tag.localname.title().replace("_", "")
         class_ = next((o for o in self.objects if o.__name__ == class_name), None)
         if not class_:
             raise ValueError("There is no class with name \"{0}\" corresponding to the object \"{1}\"."
-                .format(class_name, xml_elt.tag))
+                .format(class_name, tag.localname))
 
         obj = class_()
         self._deserialize_attributes(xml_elt.attrib, obj)
@@ -118,8 +121,12 @@ class Serializer:
 
                 obj_child = self._deserialize_object(xml_child)
                 if not isinstance(obj_child, obj.children.type):
-                    raise ValueError("The class \"{0}\" does not allow children of type \"{1}\"."
-                        .format(class_name, obj_child.__class__.__name__))
+                    if isinstance(obj_child, self.Reference):
+                        with open("../data/Manafia/" + obj_child.path.value) as f:
+                            obj_child = self.deserialize(f.read())
+                    else:
+                        raise ValueError("The class \"{0}\" does not allow children of type \"{1}\"."
+                            .format(class_name, obj_child.class_name()))
 
                 if not obj.children.value:
                     obj.children.value = []
