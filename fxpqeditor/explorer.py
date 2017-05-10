@@ -24,6 +24,8 @@ class FxpqExplorer(ttk.Treeview):
         self.Zone = package_manager.get_class("fxpq.roots", "Zone")
         self.Dimension = package_manager.get_class("fxpq.roots", "Dimension")
 
+        self.custom_images = package_manager.get_config("images")
+
         self.objects = []
 
         self.configure(selectmode='browse', columns=("type",))
@@ -73,6 +75,12 @@ class FxpqExplorer(ttk.Treeview):
     def _get_image(self, class_name):
         image = self._image_cache.get(class_name, None)
         if image:
+            return image
+
+        custom_image = self.custom_images.get(class_name, None)
+        if custom_image:
+            image = tk.BitmapImage(data=ascii_to_xbm(custom_image))
+            self._image_cache[class_name] = image
             return image
 
         path = Path(self._image_pattern.format(class_name))
