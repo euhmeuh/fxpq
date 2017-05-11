@@ -62,44 +62,46 @@ class Serializer:
         return self._deserialize_object(root[0])
 
     def _serialize_object(self, xml_root, obj):
-        name = obj.class_name().lower()
+        name = obj.class_name.lower()
         attribs, attrib_elts = self._serialize_attributes(obj)
         xml_elt = etree.SubElement(xml_root, name, attrib=attribs)
 
         for attrib_elt, prop in attrib_elts.items():
             xml_attrib_elt = etree.SubElement(xml_elt, attrib_elt)
-            self._serialize_property_value(xml_attrib_elt, prop)
-        if obj.children:
-            self._serialize_property_value(xml_elt, obj.children)
+            self._serialize_property_value(xml_attrib_elt, prop, obj)
+        if obj.children_property:
+            self._serialize_property_value(xml_elt, obj.children_property, obj)
 
     def _serialize_attributes(self, obj):
         inline_attribs = {}
         attribute_elts = {}
-        for name, prop in obj.get_properties().items():
-            if prop.is_default() and not prop.required:
+        for name, prop in obj.properties.items():
+            if prop.is_default(obj) and not prop.required:
                 continue
 
             if is_primitive(prop.type):
-                inline_attribs[name] = str(prop.value)
+                inline_attribs[name] = str(prop.value(obj))
             else:
-                elt_name = "{0}.{1}".format(obj.class_name().lower(), name)
+                elt_name = "{0}.{1}".format(obj.class_name.lower(), name)
                 attribute_elts[elt_name] = prop
 
         return inline_attribs, attribute_elts
 
-    def _serialize_property_value(self, xml_elt, prop):
-        if prop.value is None:
+    def _serialize_property_value(self, xml_elt, prop, obj):
+        prop_value = prop.value(obj)
+
+        if prop_value is None:
             return
 
         if is_primitive(prop.type):
-            xml_elt.text = str(prop.value)
+            xml_elt.text = str(prop_value)
             return
 
         if prop.is_many():
-            for value in prop.value:
+            for value in prop_value:
                 self._serialize_object(xml_elt, value)
         else:
-            self._serialize_object(xml_elt, prop.value)
+            self._serialize_object(xml_elt, prop_value)
 
     def _deserialize_object(self, xml_elt):
         tag = etree.QName(xml_elt.tag)
@@ -112,51 +114,48 @@ class Serializer:
         obj = class_()
         self._deserialize_attributes(xml_elt.attrib, obj)
 
-        if obj.children and is_primitive(obj.children.type):
-            self._parse_primitive_value(obj.children, self._get_text(xml_elt))
+        if obj.children_property and is_primitive(class_.children_property.type):
+            self._parse_primitive_value(obj, obj.children_property, self._get_text(xml_elt))
 
         for xml_child in xml_elt:
             if "." in xml_child.tag:
                 self._deserialize_attribute_element(xml_child, obj)
             else:
-                if not obj.children:
+                if not obj.children_property:
                     raise ValueError("The class \"{0}\" does not allow children."
                         .format(class_name))
 
                 obj_child = self._deserialize_object(xml_child)
-                if not isinstance(obj_child, obj.children.type):
+                if not isinstance(obj_child, obj.children_property.type):
                     if isinstance(obj_child, self.Reference):
-                        with open("../data/Manafia/" + obj_child.path.value) as f:
+                        # TODO
+                        with open("../data/Manafia/" + obj_child.path) as f:
                             obj_child = self.deserialize(f.read())
                     else:
                         raise ValueError("The class \"{0}\" does not allow children of type \"{1}\"."
-                            .format(class_name, obj_child.class_name()))
+                            .format(class_name, obj_child.class_name))
 
-                if not obj.children.value:
-                    obj.children.value = []
-                obj.children.value.append(obj_child)
+                obj.children.append(obj_child)
 
         return obj
 
     def _deserialize_attributes(self, attrib, obj):
         for name, value in attrib.items():
-            prop = getattr(obj, name)  # will always work, thanks to the validator
-            self._parse_primitive_value(prop, value)
+            prop = obj.properties.get(name)  # will always work, thanks to the validator
+            self._parse_primitive_value(obj, prop, value)
 
     def _deserialize_attribute_element(self, xml_elt, obj):
         class_name, attr_name = xml_elt.tag.split(".")
-        prop = getattr(obj, attr_name)  # will always work, thanks to the validator
+        prop = obj.properties.get(attr_name)  # will always work, thanks to the validator
 
         if is_primitive(prop.type):
-            self._parse_primitive_value(prop, self._get_text(xml_elt))
+            self._parse_primitive_value(obj, prop, self._get_text(xml_elt))
             return
 
         if prop.is_many():
             for xml_child in xml_elt:
                 obj_child = self._deserialize_object(xml_child)
-                if not prop.value:
-                    prop.value = []
-                prop.value.append(obj_child)
+                prop.value(obj).append(obj_child)
         else:
             try:
                 xml_child = xml_elt[0]
@@ -167,13 +166,13 @@ class Serializer:
                 else:
                     return
 
-            prop.value = self._deserialize_object(xml_child)
+            prop.set_value(obj, self._deserialize_object(xml_child))
 
-    def _parse_primitive_value(self, prop, string):
+    def _parse_primitive_value(self, obj, prop, string):
         if prop.type == bool:
-            prop.value = bool_from_string(string)
+            prop.set_value(obj, bool_from_string(string))
         else:
-            prop.value = prop.type(string)
+            prop.set_value(obj, prop.type(string))
 
     def _get_text(self, xml_elt):
         """Get the full text data from a xml element"""

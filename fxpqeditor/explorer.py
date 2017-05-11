@@ -37,28 +37,27 @@ class FxpqExplorer(ttk.Treeview):
             self._add(obj)
 
     def clear(self):
-        print(self.get_children())
         for item in self.get_children():
             self.delete(item)
 
     def _add(self, obj, parent=None):
         parent = parent if parent else ""
 
-        display_name = obj.class_name()
+        display_name = obj.class_name
         if hasattr(obj, 'display_name'):
-            display_name = obj.display_name.value
+            display_name = obj.display_name
 
         elt = self.insert(parent, "end",
             text=display_name,
-            values=(obj.class_name(),),
-            image=self._get_image(obj.class_name().lower()))
+            values=(obj.class_name,),
+            image=self._get_image(obj.class_name.lower()))
 
-        if obj.children and not is_primitive(obj.children.type):
-            if obj.children.is_many():
-                for child in obj.children.value:
+        if obj.children_property and not is_primitive(obj.children_property.type):
+            if obj.children_property.is_many():
+                for child in obj.children:
                     self._add(child, parent=elt)
             else:
-                self._add(obj.children.value, parent=elt)
+                self._add(obj.children, parent=elt)
 
     def _get_image(self, class_name):
         image = self._image_cache.get(class_name, None)

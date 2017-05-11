@@ -8,35 +8,31 @@ from fxpq.core import Object, Property
 class Reference(Object):
     """Reference to another fxpq file containing a root object"""
 
-    def __init__(self):
-        self.path = Property("")
+    path = Property(str)
 
 
 class Rectangle(Object):
     """Boundaries of a Zone"""
 
-    def __init__(self):
-        self.x = Property(0)
-        self.y = Property(0)
-        self.w = Property(0)
-        self.h = Property(0)
+    x = Property(int)
+    y = Property(int)
+    w = Property(int)
+    h = Property(int)
 
 
 class Change(Object):
     """Changes that happened to a dimension"""
 
-    children = Property("")
+    children = Property(str)
 
-    def __init__(self):
-        self.version = Property("")
-        self.date = Property("")
-        self.breaking = Property(False)
+    version = Property(str)
+    date = Property(str)
+    breaking = Property(bool)
 
 
 class Author(Object):
     """Author of a dimension"""
 
-    children = Property("")
+    children = Property(str)
 
-    def __init__(self):
-        self.section = Property("")
+    section = Property(str)

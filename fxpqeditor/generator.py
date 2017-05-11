@@ -38,7 +38,7 @@ class Generator:
         result = []
         element_name = self._format_name(class_)
 
-        children = self._generate_children(class_.children, class_)
+        children = self._generate_children(class_.children_property, class_)
         element = "<!ELEMENT {0} {1}>".format(element_name, children)
         result.append(element)
 
@@ -72,7 +72,7 @@ class Generator:
 
         if class_:
             element_name = self._format_name(class_)
-            for name in class_.properties().keys():
+            for name in class_.properties.keys():
                 attribute_elements.append("{0}.{1}".format(element_name, name))
 
         if not children_type and not attribute_elements:
@@ -100,7 +100,7 @@ class Generator:
     def _generate_attributes(self, class_):
         result = []
         element_name = self._format_name(class_)
-        properties = class_.properties()
+        properties = class_.properties
         if not properties:
             return result
 
@@ -115,7 +115,7 @@ class Generator:
         return result
 
     def _generate_attribute_rules(self, class_):
-        for name in class_.properties().keys():
+        for name in class_.properties.keys():
             yield "{0}\tCDATA\t#IMPLIED".format(name)
 
     def _generate_attribute_element(self, class_, name, prop):
