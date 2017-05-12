@@ -43,16 +43,17 @@ class LiveText(tk.Text):
 
 class FxpqText(LiveText):
 
-    tags = {
-        'error': {'background': '#f92672'},
-        'tag_name': {'foreground': '#f92672'},
-        'attr_name': {'foreground': '#a6e22a'},
-        'attr_value': {'foreground': '#e6db5a'},
-        'focused_tag': {'underline': 'true'},
-        'comment': {'foreground': '#75715e'},
-        'cdata': {'foreground': '#e6db5a'},
-        'disabled': {'foreground': 'darkgrey', 'background': 'grey', 'bgstipple': 'gray12'},
-    }
+    # we use a list of tuple to keep the priority order
+    tags = [
+        ('attr_value', {'foreground': '#e6db5a'}),
+        ('attr_name', {'foreground': '#a6e22a'}),
+        ('tag_name', {'foreground': '#f92672'}),
+        ('focused_tag', {'underline': 'true'}),
+        ('comment', {'foreground': '#75715e'}),
+        ('cdata', {'foreground': '#e6db5a'}),
+        ('error', {'background': '#f92672', 'foreground': 'black'}),
+        ('disabled', {'foreground': 'darkgrey', 'background': 'grey', 'bgstipple': 'gray12'}),
+    ]
 
     qualified_name = r'(?:[a-zA-Z_][\w_.-]*:)?[a-zA-Z_][\w_.-]*'
     syntax = {
@@ -179,11 +180,11 @@ class FxpqText(LiveText):
             self.set_text(text)
 
     def _configure_tags(self):
-        for tag, val in self.tags.items():
+        for tag, val in self.tags:
             self.tag_config(tag, **val)
 
     def _remove_tags(self):
-        for tag in self.tags.keys():
+        for tag, val in self.tags:
             self.tag_remove(tag, "1.0", "end")
 
     def _highlight(self, text):
