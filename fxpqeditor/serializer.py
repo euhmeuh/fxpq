@@ -3,6 +3,7 @@ Serialize from and to XML
 """
 
 from lxml import etree
+from pathlib import Path
 
 from generator import Generator
 from validator import Validator, Error
@@ -45,7 +46,12 @@ class Serializer:
         result = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE fxpq>\n{}'
         return result.format(document)
 
-    def deserialize(self, xml_string):
+    def deserialize(self, xml_string, reference_path=None):
+        """Deserialize an xml fxpq file into an fxpq object
+        Specifying the @reference_path argument enables following references recursively.
+        Otherwise references will just be serialized as Reference instances.
+        """
+
         self.errors = []
 
         # Most of the potential errors that the serializer would have faced are
@@ -59,7 +65,8 @@ class Serializer:
             parser=etree.XMLParser(remove_comments=True))
 
         # fxpq files always have one child in the root
-        return self._deserialize_object(root[0])
+        first_elt = root[0]
+        return self._deserialize_object(first_elt, reference_path)
 
     def _serialize_object(self, xml_root, obj):
         name = obj.class_name.lower()
@@ -103,7 +110,7 @@ class Serializer:
         else:
             self._serialize_object(xml_elt, prop_value)
 
-    def _deserialize_object(self, xml_elt):
+    def _deserialize_object(self, xml_elt, reference_path=None):
         tag = etree.QName(xml_elt.tag)
         class_name = tag.localname.title().replace("_", "")
         class_ = next((o for o in self.objects if o.__name__ == class_name), None)
@@ -114,26 +121,30 @@ class Serializer:
         obj = class_()
         self._deserialize_attributes(xml_elt.attrib, obj)
 
+        if isinstance(obj, self.Reference) and reference_path:
+            try:
+                return self._follow_reference(obj, reference_path)
+            except FileNotFoundError as e:
+                self._raise_error("Cannot find referenced file \"{0}\".".format(e.filename), xml_elt.sourceline)
+
         if obj.children_property and is_primitive(class_.children_property.type):
             self._parse_primitive_value(obj, obj.children_property, self._get_text(xml_elt))
 
         for xml_child in xml_elt:
             if "." in xml_child.tag:
-                self._deserialize_attribute_element(xml_child, obj)
+                self._deserialize_attribute_element(xml_child, obj, reference_path)
             else:
                 if not obj.children_property:
-                    raise ValueError("The class \"{0}\" does not allow children."
-                        .format(class_name))
+                    self._raise_error("The class \"{0}\" does not allow children.".format(class_name), xml_child.sourceline)
 
-                obj_child = self._deserialize_object(xml_child)
-                if not isinstance(obj_child, obj.children_property.type):
-                    if isinstance(obj_child, self.Reference):
-                        # TODO
-                        with open("../data/Manafia/" + obj_child.path) as f:
-                            obj_child = self.deserialize(f.read())
-                    else:
-                        raise ValueError("The class \"{0}\" does not allow children of type \"{1}\"."
-                            .format(class_name, obj_child.class_name))
+                obj_child = self._deserialize_object(xml_child, reference_path)
+
+                # we don't check type if the child has been
+                # deserialized as an unfollowed Reference
+                if not isinstance(obj_child, self.Reference):
+                    if not isinstance(obj_child, obj.children_property.type):
+                        self._raise_error("The class \"{0}\" does not allow children of type \"{1}\"."
+                            .format(class_name, obj_child.class_name), xml_child.sourceline)
 
                 obj.children.append(obj_child)
 
@@ -144,7 +155,7 @@ class Serializer:
             prop = obj.properties.get(name)  # will always work, thanks to the validator
             self._parse_primitive_value(obj, prop, value)
 
-    def _deserialize_attribute_element(self, xml_elt, obj):
+    def _deserialize_attribute_element(self, xml_elt, obj, reference_path=None):
         class_name, attr_name = xml_elt.tag.split(".")
         prop = obj.properties.get(attr_name)  # will always work, thanks to the validator
 
@@ -154,19 +165,29 @@ class Serializer:
 
         if prop.is_many():
             for xml_child in xml_elt:
-                obj_child = self._deserialize_object(xml_child)
+                obj_child = self._deserialize_object(xml_child, reference_path)
                 prop.value(obj).append(obj_child)
         else:
             try:
                 xml_child = xml_elt[0]
             except IndexError:
                 if prop.quantity == self.Quantity.ExactlyOne:
-                    raise ValueError("There should be at least one value for the attribute \"{0}\"."
-                        .format(attr_name))
+                    self._raise_error("There should be at least one value for the attribute \"{0}\"."
+                        .format(attr_name), xml_elt.sourceline)
                 else:
                     return
 
-            prop.set_value(obj, self._deserialize_object(xml_child))
+            prop.set_value(obj, self._deserialize_object(xml_child, reference_path))
+
+    def _follow_reference(self, reference, reference_path):
+        path = Path(reference_path).parent / reference.path
+        if not path.is_file():
+            exception = FileNotFoundError()
+            exception.filename = path
+            raise exception
+
+        with open(path) as f:
+            return self.deserialize(f.read(), reference_path=path)
 
     def _parse_primitive_value(self, obj, prop, string):
         if prop.type == bool:
@@ -183,3 +204,9 @@ class Serializer:
             string += xml_elt.tail
 
         return string
+
+    def _raise_error(self, message, sourceline=0):
+        error = Error(message)
+        error.line = sourceline
+        self.errors.append(error)
+        raise ValueError(message)

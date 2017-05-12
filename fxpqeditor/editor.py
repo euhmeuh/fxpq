@@ -20,6 +20,8 @@ TODO:
 - Move the templates folder so that there is one in each package
 - Move the icons folder so that there is one in each package
 - New files saved inside the dimension folder get tracked
+- Better test coverage
+- Remove some exceptions from the serializer that might never raise
 
 Text editor:
 - Line numbers

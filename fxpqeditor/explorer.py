@@ -50,7 +50,8 @@ class FxpqExplorer(ttk.Treeview):
         elt = self.insert(parent, "end",
             text=display_name,
             values=(obj.class_name,),
-            image=self._get_image(obj.class_name.lower()))
+            image=self._get_image(obj.class_name.lower()),
+            open=True)
 
         if obj.children_property and not is_primitive(obj.children_property.type):
             if obj.children_property.is_many():

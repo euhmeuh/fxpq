@@ -49,8 +49,8 @@ class Generator:
 
     def _generate_children(self, prop, class_=None):
         """Generate allowed children based on a Property
-           If you specify the @class_ attribute, it'll also allow attribute elements first:
-           ((attribute_elements)*, (prop.type)prop.quantity)
+        If you specify the @class_ attribute, it'll also allow attribute elements first:
+        ((attribute_elements)*, (prop.type)prop.quantity)
         """
         primitive_type = "#PCDATA"
 

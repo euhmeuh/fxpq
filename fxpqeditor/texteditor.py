@@ -143,7 +143,7 @@ class FxpqText(LiveText):
         self._highlight(text)
 
         try:
-            self.obj = self.serializer.deserialize(text)
+            self.obj = self.serializer.deserialize(text, reference_path=self.filepath)
         except ValueError:
             self.obj = None
             self._highlight_errors(self.serializer.errors)
