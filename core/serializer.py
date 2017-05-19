@@ -5,9 +5,9 @@ Serialize from and to XML
 from lxml import etree
 from pathlib import Path
 
-from generator import Generator
-from validator import Validator, Error
-from tools import is_primitive, remove_encoding_tag, bool_from_string
+from core.generator import Generator
+from core.validator import Validator, Error
+from core.tools import is_primitive, remove_encoding_tag, bool_from_string
 
 
 class Serializer:
@@ -26,7 +26,7 @@ class Serializer:
 
         self.generator = Generator(self.package_manager)
         dtd = self.generator.generate()
-        self.validator = Validator(dtd, self.package_manager.get_path("fxpq/fxpq.sch"))
+        self.validator = Validator(dtd, "core/fxpq.sch")
 
     @classmethod
     def instance(cls):

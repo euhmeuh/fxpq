@@ -2,11 +2,13 @@
 Package manager
 """
 
+import os
+from os import path
 from pathlib import PurePath
 import pkgutil
 import importlib
 
-from serializer import Serializer
+from core.serializer import Serializer
 
 
 class PackageManager:
@@ -62,7 +64,38 @@ class PackageManager:
         return result
 
     def get_path(self, path):
+        """Get a path relative to the packages directory"""
         return str(self.packages_dir / path)
+
+    def get_files_in(self, common_folder, base_class=None):
+        """Find all the files present in every @common_folder of the packages.
+        If @base_class is specified, restrict results to packages that defines a subclass of @base_class.
+
+        Example: package_manager.get_files_in("templates") returns all the files in the "templates" folder of every package.
+        """
+        result = []
+        for namespace, location in self.get_packages(base_class):
+
+            folder = path.join(location, common_folder)
+            if not path.exists(folder):
+                continue
+
+            result.extend([path.abspath(path.join(folder, f))
+                for f in os.listdir(folder) if path.isfile(path.join(folder, f))])
+
+        return result
+
+    def get_packages(self, base_class=None):
+        """Returns the toplevel packages discovered by the package manager as a tuple (name, path).
+        If @base_class is specified, restrict results to packages that defines a subclass of @base_class.
+        """
+        modules = self.modules
+        if base_class:
+            modules = [c.__module__ for c in base_class.__subclasses__()]
+
+        namespaces = {module.split(".")[0] for module in modules}
+
+        return [(ns, self.get_path(ns)) for ns in namespaces]
 
     def _find_and_import_modules(self, pkg_dir):
         self.modules = []

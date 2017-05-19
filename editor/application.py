@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
-
 import tkinter as tk
 from tkinter import filedialog
 import pygubu
 
-from package_manager import PackageManager
-from templator import Templator
-from serializer import Serializer
-from texteditor import FxpqNotebook
-from explorer import FxpqExplorer
+from core.package_manager import PackageManager
+from core.templator import Templator
+from core.serializer import Serializer
+
+from editor.texteditor import FxpqNotebook
+from editor.explorer import FxpqExplorer
 
 
 """
@@ -22,6 +21,7 @@ TODO:
 - New files saved inside the dimension folder get tracked
 - Better test coverage
 - Remove some exceptions from the serializer that might never raise
+- Replace on_key binding in the texteditor with on_insert and on_delete to better handle disabled areas
 
 Text editor:
 - Line numbers
@@ -31,6 +31,10 @@ Text editor:
 - Right click copy/cut/paste
 - Search & replace
 - Smart tabs
+
+Bugs:
+- Form values are kept when creating from template
+- Saving adds an extra linefeed
 """
 
 
@@ -85,18 +89,21 @@ class Application(pygubu.TkApplication):
         ("FXPQ file", "*.dim"),
         ("All files", "*.*"))
 
+    ui_file = "./editor/editor.ui"
+    packages_dir = "./packages"
+
     def _create_ui(self):
         self.builder = builder = pygubu.Builder()
 
-        builder.add_from_file('editor.ui')
+        builder.add_from_file(self.ui_file)
 
         self.mainwindow = builder.get_object('Frame_Main', self.master)
         self.mainwindow.pack(fill=tk.BOTH, expand=1)
         self.panedwindow = builder.get_object('Panedwindow_Main', self.master)
         self.panedwindow.pack(fill=tk.BOTH, expand=1)
 
-        self.package_manager = PackageManager("./packages")
-        self.templator = Templator("./templates")
+        self.package_manager = PackageManager(self.packages_dir)
+        self.templator = Templator(self.package_manager)
 
         self.explorer = FxpqExplorer(self.package_manager, self.master)
         self.pane_explorer = builder.get_object('Pane_Explorer', self.master)
@@ -159,7 +166,7 @@ class Application(pygubu.TkApplication):
         fxpqtext = self.notebook.current()
         if fxpqtext.filepath:
             with open(fxpqtext.filepath, 'w') as f:
-                f.write(fxpqtext.get_text())
+                f.write(fxpqtext.text)
                 fxpqtext.dirty = False
         else:
             self.on_save_as()
@@ -177,7 +184,7 @@ class Application(pygubu.TkApplication):
             return
 
         with open(filepath, 'w') as f:
-            f.write(fxpqtext.get_text())
+            f.write(fxpqtext.text)
             fxpqtext.filepath = filepath
             fxpqtext.dirty = False
 
@@ -214,8 +221,9 @@ class Application(pygubu.TkApplication):
         self.explorer.refresh(self.notebook.get_objects())
 
 
-if __name__ == '__main__':
-    root = tk.Tk()
-    root.title("FXPQuest Editor")
-    app = Application(root)
-    app.run()
+class Editor:
+    def run(self):
+        root = tk.Tk()
+        root.title("FXPQuest Editor")
+        app = Application(root)
+        app.run()

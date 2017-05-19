@@ -7,11 +7,11 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 
-from tools import is_primitive, ascii_to_xbm
+from core.tools import is_primitive, ascii_to_xbm
 
 
 class FxpqExplorer(ttk.Treeview):
-    _image_pattern = "icons/{}.xbm"
+    _image_pattern = "{}.xbm"
     _image_default = "object"
     _image_cache = {}
 
@@ -24,6 +24,7 @@ class FxpqExplorer(ttk.Treeview):
         self.Dimension = package_manager.get_class("fxpq.roots", "Dimension")
 
         self.custom_images = package_manager.get_config("images")
+        self.icons = package_manager.get_files_in("icons", self.Object)
 
         self.configure(selectmode='browse', columns=("type",))
         self.column('#0', width=100)
@@ -71,10 +72,14 @@ class FxpqExplorer(ttk.Treeview):
             self._image_cache[class_name] = image
             return image
 
-        path = Path(self._image_pattern.format(class_name))
-        if not path.is_file():
-            path = self._image_pattern.format(self._image_default)
+        filename = self._image_pattern.format(class_name)
+        filepath = self._try_get_icon(filename)
+        if not filepath or not filepath.is_file():
+            filepath = self._try_get_icon(self._image_pattern.format(self._image_default))
 
-        image = tk.BitmapImage(file=path)
+        image = tk.BitmapImage(file=filepath)
         self._image_cache[class_name] = image
         return image
+
+    def _try_get_icon(self, filename):
+        return next((Path(i) for i in self.icons if Path(i).name == filename), None)

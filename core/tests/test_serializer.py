@@ -4,15 +4,17 @@ Unit tests for fxpqeditor
 
 import unittest
 
-from package_manager import PackageManager
-from serializer import Serializer
+from core.package_manager import PackageManager
+from core.serializer import Serializer
 
 
 class SerializerTests(unittest.TestCase):
 
+    packages_dir = "./packages"
+
     @classmethod
     def setUpClass(cls):
-        pm = PackageManager("./packages")
+        pm = PackageManager(cls.packages_dir)
         Serializer.package_manager = pm
         cls.Zone = pm.get_class("fxpq.roots", "Zone")
         cls.Dimension = pm.get_class("fxpq.roots", "Dimension")
@@ -105,7 +107,3 @@ class SerializerTests(unittest.TestCase):
             rect.w, rect.h = 1, 1
             zone.rectangles = [rect]
             yield zone
-
-
-if __name__ == "__main__":
-    unittest.main()

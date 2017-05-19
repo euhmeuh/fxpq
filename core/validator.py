@@ -7,7 +7,7 @@ from io import StringIO
 from lxml import etree
 from lxml import isoschematron
 
-from tools import remove_encoding_tag
+from core.tools import remove_encoding_tag
 
 
 class Error:

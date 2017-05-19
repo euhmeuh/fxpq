@@ -9,8 +9,8 @@ from tkinter import ttk
 
 from pygubu.builder.widgets.scrollbarhelper import ScrollbarHelper
 
-from serializer import Serializer
-from tools import partition
+from core.serializer import Serializer
+from core.tools import partition
 
 
 class LiveText(tk.Text):
@@ -78,6 +78,8 @@ class FxpqText(LiveText):
         self.title = ""
         self.temptitle = "untitled"
 
+        self.labels = []
+
         self.bind('<Key>', self.on_key)
         self.bind("<Tab>", self.on_tab)
         self.configure(wrap=tk.NONE,
@@ -86,6 +88,7 @@ class FxpqText(LiveText):
             insertbackground='white',
             selectbackground='#49483e')
         self._configure_tags()
+        self._configure_line_numbers()
 
     @property
     def filepath(self):
@@ -139,15 +142,15 @@ class FxpqText(LiveText):
         else:
             self.dirty = True
 
-        text = self.get_text()
         self._remove_tags()
-        self._highlight(text)
 
         try:
-            self.obj = self.serializer.deserialize(text, reference_path=self.filepath)
+            self.obj = self.serializer.deserialize(self.text, reference_path=self.filepath)
         except ValueError:
             self.obj = None
             self._highlight_errors(self.serializer.errors)
+
+        self._highlight()
 
     def update_title(self):
         title = self.temptitle
@@ -161,10 +164,12 @@ class FxpqText(LiveText):
         self.title = title
         self.master.master.tab(self.master, text=self.title)
 
-    def get_text(self):
+    @property
+    def text(self):
         return self.get(1.0, tk.END)
 
-    def set_text(self, text):
+    @text.setter
+    def text(self, text):
         self.ignore_next_dirty()
         self.delete(1.0, tk.END)
         self.insert(tk.END, text)
@@ -177,7 +182,7 @@ class FxpqText(LiveText):
         self.filepath = filepath
         with open(filepath) as f:
             text = f.read()
-            self.set_text(text)
+            self.text = text
 
     def _configure_tags(self):
         for tag, val in self.tags:
@@ -187,10 +192,13 @@ class FxpqText(LiveText):
         for tag, val in self.tags:
             self.tag_remove(tag, "1.0", "end")
 
-    def _highlight(self, text):
+        for label in self.labels:
+            self.delete(label)
+
+    def _highlight(self):
         for tag, rule in self.syntax.items():
             regex = rule.replace(r'{{qualified_name}}', self.qualified_name)
-            for match in re.finditer(regex, text, flags=re.DOTALL):
+            for match in re.finditer(regex, self.text, flags=re.DOTALL):
                 for start, end in match.spans(1):
                     self.tag_add(tag,
                         "1.0 + {} chars".format(start),
@@ -202,6 +210,12 @@ class FxpqText(LiveText):
             self.tag_add('error',
                 "{}.0 linestart".format(error.line),
                 "{}.0 lineend + 1 chars".format(error.line))
+            # label = tk.Label(self, text=error.message)
+            # self.labels.append(label)
+            # self.window_create("{}.0 lineend".format(error.line), padx=5, window=label)
+
+    def _configure_line_numbers(self):
+        pass  # TODO
 
 
 class FxpqNotebook(ttk.Notebook):
@@ -222,7 +236,7 @@ class FxpqNotebook(ttk.Notebook):
         fxpqtext = FxpqText()
         self._new_tab(title, fxpqtext)
         fxpqtext.temptitle = title
-        fxpqtext.set_text(text)
+        fxpqtext.text = text
         fxpqtext.dirty = True
 
     def open(self, filepath):

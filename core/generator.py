@@ -2,11 +2,12 @@
 Generates DTD rules from python packages
 """
 
-from tools import is_primitive
+from core.tools import is_primitive
 
 
 class Generator:
     def __init__(self, package_manager):
+        self.package_manager = package_manager
         self.Object = package_manager.get_class("fxpq.core", "Object")
         self.objects = self.Object.__subclasses__()
 
@@ -20,7 +21,7 @@ class Generator:
 
         # it also have an attribute list with a version and all the xmlns definitions of other packages
         attributes = ["version\tCDATA\t#REQUIRED"]
-        namespaces = {self._get_namespace(c) for c in self.objects}
+        namespaces = [ns for ns, _ in self.package_manager.get_packages(self.Object)]
         attributes.extend(["xmlns:{0}\tCDATA\t#FIXED\t\"python-namespace:{0}\"".format(ns)
             for ns in namespaces if ns != "fxpq"])
         fxpq_attlist = "<!ATTLIST fxpq\n\t{0}\n>".format("\n\t".join(attributes))
