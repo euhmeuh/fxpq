@@ -6,7 +6,7 @@ from core.package_manager import PackageManager
 from core.templator import Templator
 from core.serializer import Serializer
 
-from editor.texteditor import FxpqNotebook
+from editor.texteditor import FxpqDocumentManager
 from editor.explorer import FxpqExplorer
 
 
@@ -23,7 +23,6 @@ TODO:
 
 Text editor:
 - Line numbers
-- Display validation errors
 - Show matching tags
 - Autocomplete class and properties
 - Right click copy/cut/paste
@@ -107,10 +106,10 @@ class Application(pygubu.TkApplication):
         self.pane_explorer = builder.get_object('Pane_Explorer', self.master)
         self.pane_explorer.add(self.explorer)
 
-        self.notebook = FxpqNotebook(self.master)
+        self.doc_manager = FxpqDocumentManager(self.master)
 
         self.pane_editor = builder.get_object('Pane_Editor', self.master)
-        self.pane_editor.add(self.notebook)
+        self.pane_editor.add(self.doc_manager)
 
         self.mainmenu = menu = builder.get_object('Menu_Main', self.master)
         self.set_menu(menu)
@@ -133,7 +132,7 @@ class Application(pygubu.TkApplication):
 
         def on_create(obj_type, input_values):
             title, text = self.templator.new(obj_type, input_values)
-            self.notebook.new(title=title, text=text)
+            self.doc_manager.new(title=title, text=text)
             self._update_menu()
             dialog.close()
 
@@ -156,12 +155,12 @@ class Application(pygubu.TkApplication):
         if not filepath:
             return
 
-        self.notebook.open(filepath)
+        self.doc_manager.open(filepath)
         self._update_menu()
         self._update_explorer()
 
     def on_save(self, event=None):
-        fxpqtext = self.notebook.current()
+        fxpqtext = self.doc_manager.current()
         if fxpqtext.filepath:
             with open(fxpqtext.filepath, 'w') as f:
                 f.write(fxpqtext.text)
@@ -172,7 +171,7 @@ class Application(pygubu.TkApplication):
         self._update_explorer()
 
     def on_save_as(self):
-        fxpqtext = self.notebook.current()
+        fxpqtext = self.doc_manager.current()
 
         initialfile = fxpqtext.title.replace("*", "").replace(" ", "")
 
@@ -211,12 +210,12 @@ class Application(pygubu.TkApplication):
 
     def _update_menu(self):
         filemenu = self.builder.get_object('Submenu_File', self.master)
-        state = tk.NORMAL if self.notebook.current() else tk.DISABLED
+        state = tk.NORMAL if self.doc_manager.current() else tk.DISABLED
         filemenu.entryconfig("Save", state=state)
         filemenu.entryconfig("Save as...", state=state)
 
     def _update_explorer(self):
-        self.explorer.refresh(self.notebook.get_objects())
+        self.explorer.refresh(self.doc_manager.get_objects())
 
 
 class Editor:

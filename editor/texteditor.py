@@ -13,6 +13,14 @@ from core.serializer import Serializer
 from core.tools import partition
 
 
+class FxpqErrorList(tk.Listbox):
+
+    def update(self, errors):
+        self.delete(0, tk.END)
+        for error in errors:
+            self.insert(tk.END, str(error))
+
+
 class LiveText(tk.Text):
     """Text widget that calls on_modified() when edits are made by the user"""
 
@@ -78,7 +86,7 @@ class FxpqText(LiveText):
         self.title = ""
         self.temptitle = "untitled"
 
-        self.labels = []
+        self.error_list = FxpqErrorList()
 
         self.bind('<Key>', self.on_key)
         self.bind("<Tab>", self.on_tab)
@@ -148,7 +156,10 @@ class FxpqText(LiveText):
             self.obj = self.serializer.deserialize(self.text, reference_path=self.filepath)
         except ValueError:
             self.obj = None
+            self.event_generate("<<ValidationError>>")
             self._highlight_errors(self.serializer.errors)
+
+        self.error_list.update(self.serializer.errors)
 
         self._highlight()
 
@@ -192,9 +203,6 @@ class FxpqText(LiveText):
         for tag, val in self.tags:
             self.tag_remove(tag, "1.0", "end")
 
-        for label in self.labels:
-            self.delete(label)
-
     def _highlight(self):
         for tag, rule in self.syntax.items():
             regex = rule.replace(r'{{qualified_name}}', self.qualified_name)
@@ -205,47 +213,41 @@ class FxpqText(LiveText):
                         "1.0 + {} chars".format(end))
 
     def _highlight_errors(self, errors):
-        print(errors)
         for error in errors:
             self.tag_add('error',
                 "{}.0 linestart".format(error.line),
                 "{}.0 lineend + 1 chars".format(error.line))
-            # label = tk.Label(self, text=error.message)
-            # self.labels.append(label)
-            # self.window_create("{}.0 lineend".format(error.line), padx=5, window=label)
 
     def _configure_line_numbers(self):
         pass  # TODO
 
 
 class FxpqNotebook(ttk.Notebook):
-    """The main document manager of the fxpq editor"""
-
-    def __init__(self, master=None):
-        super().__init__(master)
-
-        self.documents = []
+    """Custom notebook"""
 
     def current(self):
+        """Get the currently focused tab"""
+
         if not self.index("end"):
             return None
         # tab content is in a scrollbarhelper, so we get its child
         return self.winfo_children()[self.index("current")].cwidget
 
-    def new(self, title="untitled", text=""):
-        fxpqtext = FxpqText()
-        self._new_tab(title, fxpqtext)
-        fxpqtext.temptitle = title
-        fxpqtext.text = text
-        fxpqtext.dirty = True
+    def new(self, filepath=None, title=None, text=""):
+        """Create a new tab"""
 
-    def open(self, filepath):
         fxpqtext = FxpqText()
-        self._new_tab(filepath, fxpqtext)
-        fxpqtext.open(filepath)
+        if filepath:
+            self._new_tab(filepath, fxpqtext)
+            fxpqtext.open(filepath)
+        else:
+            title = "untitled" if title is None else title
+            self._new_tab(title, fxpqtext)
+            fxpqtext.temptitle = title
+            fxpqtext.text = text
+            fxpqtext.dirty = True
 
-    def get_objects(self):
-        return [doc.obj for doc in self.documents if doc.obj]
+        return fxpqtext
 
     def _new_tab(self, name, element):
         scrollbar = ScrollbarHelper(master=self, scrolltype='both')
@@ -253,4 +255,54 @@ class FxpqNotebook(ttk.Notebook):
         element.master = scrollbar
         self.add(scrollbar, text=name)
         self.select(scrollbar)
-        self.documents.append(element)
+
+
+class FxpqDocumentManager(tk.Frame):
+    """The main document manager of the fxpq editor"""
+
+    def __init__(self, master=None):
+        super().__init__(master)
+
+        self.documents = []
+
+        self.current_error_list = None
+
+        self.bind_all("<<ValidationError>>", self._on_validation_error)
+        self._create_ui()
+
+    def get_objects(self):
+        return [doc.obj for doc in self.documents if doc.obj]
+
+    def current(self):
+        return self.notebook.current()
+
+    def new(self, title=None, text=""):
+        doc = self.notebook.new(title=title, text=text)
+        self.documents.append(doc)
+
+    def open(self, filepath):
+        doc = self.notebook.new(filepath=filepath)
+        self.documents.append(doc)
+
+    def _create_ui(self):
+        self.panedwindow = tk.PanedWindow(self, orient=tk.VERTICAL)
+        self.panedwindow.pack(fill=tk.BOTH, expand=1)
+        self.notebook = FxpqNotebook(self.panedwindow)
+        self.panedwindow.add(self.notebook, height=1000, minsize=300)
+
+    def _on_validation_error(self, event=None):
+        sender = event.widget
+        error_list = sender.error_list
+
+        if self.current_error_list:
+            self.panedwindow.remove(self.current_error_list)
+
+        error_list.master = self.panedwindow
+        self.panedwindow.add(error_list, minsize=50, sticky=tk.W + tk.S + tk.E)
+
+        if not self.current_error_list:
+            # this is the first time we display the error list
+            # so we need to set up a default height
+            self.panedwindow.paneconfig(error_list, height=200)
+
+        self.current_error_list = error_list

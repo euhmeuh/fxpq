@@ -48,7 +48,7 @@ class FxpqExplorer(ttk.Treeview):
         if hasattr(obj, 'display_name'):
             display_name = obj.display_name
 
-        elt = self.insert(parent, "end",
+        elt = self.insert(parent, tk.END,
             text=display_name,
             values=(obj.class_name,),
             image=self._get_image(obj.class_name.lower()),
