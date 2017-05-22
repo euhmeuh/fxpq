@@ -12,19 +12,7 @@ from pygubu.builder.widgets.scrollbarhelper import ScrollbarHelper
 from core.serializer import Serializer
 from core.tools import partition
 
-
-class EventEmitter:
-    def __init__(self):
-        self.bindings = {}
-
-    def on(self, event_name, method):
-        bindings = self.bindings.get(event_name, [])
-        bindings.append(method)
-        self.bindings[event_name] = bindings
-
-    def emit(self, event_name, *args):
-        for method in self.bindings.get(event_name, []):
-            method(self, *args)
+from editor.events import EventEmitter
 
 
 class FxpqDocument(EventEmitter):
@@ -95,7 +83,12 @@ class FxpqDocument(EventEmitter):
             self.obj = None
             self.emit("validation-failed", Serializer.instance().errors)
 
-        return Serializer.instance().errors
+        errors = Serializer.instance().errors
+
+        if not errors:
+            self.emit('validation-passed')
+
+        return errors
 
 
 class FxpqErrorList(tk.Listbox):
@@ -219,6 +212,8 @@ class FxpqText(LiveText):
 
         self._highlight()
 
+        self.event_generate('<<DocumentsChanged>>')
+
     @property
     def text(self):
         return self.get(1.0, tk.END)
@@ -270,15 +265,16 @@ class FxpqEditor(tk.PanedWindow):
         self.error_list = None
         self._create_ui()
 
+        self.doc.on('validation-passed', self.on_validation_passed)
         self.doc.on('validation-failed', self.on_validation_failed)
 
-    def on_validation_failed(self, doc, errors):
-        if not errors:
+    def on_validation_passed(self, doc):
+        if self.error_list:
             self.remove(self.error_list)
-            return
+            self.error_list = None
 
+    def on_validation_failed(self, doc, errors):
         if not self.error_list:
-            # this is the first time we display the error list
             self.error_list = FxpqErrorList(self)
             self.add(self.error_list, minsize=50, height=200, sticky=tk.W + tk.S + tk.E)
 
