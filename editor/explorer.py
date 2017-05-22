@@ -7,7 +7,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 
-from core.tools import is_primitive, ascii_to_xbm
+from core.tools import ascii_to_xbm
 
 
 class FxpqExplorer(ttk.Treeview):
@@ -32,34 +32,48 @@ class FxpqExplorer(ttk.Treeview):
         self.heading('#0', text="Element")
         self.heading('type', text="Type")
 
-    def refresh(self, objects):
+    def refresh(self, documents):
         self.clear()
-        for obj in objects:
-            self._add(obj)
+        for doc in self._find_orphans(documents):
+            self._add(doc)
 
     def clear(self):
         for item in self.get_children():
             self.delete(item)
 
-    def _add(self, obj, parent=None):
+    def _find_orphans(self, documents):
+        result = []
+        for i, doc in enumerate(documents):
+            others = documents[i + 1:]
+            others.extend(documents[:i])
+            for other in others:
+                if doc.filepath in other.get_references():
+                    continue
+            result.append(doc)
+
+        return result
+
+    def _add(self, doc, parent=None):
         parent = parent if parent else ""
 
-        display_name = obj.class_name
-        if hasattr(obj, 'display_name'):
-            display_name = obj.display_name
+        if doc.obj:
+            display_name = doc.obj.class_name
+            if hasattr(doc.obj, 'display_name'):
+                display_name = doc.obj.display_name
 
-        elt = self.insert(parent, tk.END,
-            text=display_name,
-            values=(obj.class_name,),
-            image=self._get_image(obj.class_name.lower()),
-            open=True)
+            elt = self.insert(parent, tk.END,
+                text=display_name,
+                values=(doc.obj.class_name,),
+                image=self._get_image(doc.obj.class_name.lower()),
+                open=True)
 
-        if obj.children_property and not is_primitive(obj.children_property.type):
-            if obj.children_property.is_many():
-                for child in obj.children:
-                    self._add(child, parent=elt)
-            else:
-                self._add(obj.children, parent=elt)
+            for child in doc.obj.iter_children():
+                self._add(child, parent=elt)
+        else:
+            elt = self.insert(parent, tk.END,
+                text=doc.title,
+                values=("???",),
+                open=True)
 
     def _get_image(self, class_name):
         image = self._image_cache.get(class_name, None)

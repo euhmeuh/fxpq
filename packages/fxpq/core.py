@@ -106,6 +106,26 @@ class Object(metaclass=MetaObject):
     def act(self, delta_time):
         raise NotImplementedError
 
+    def has_object_children(self):
+        return self.children_property and self.children_property.type not in [str, int, float, bool]
+
+    def iter_children(self):
+        """Returns an iterable, even if the object has no children
+        """
+        if not self.has_object_children():
+            return
+
+        if self.children_property.is_many():
+            for child in self.children:
+                yield child
+        else:
+            yield self.children
+
+    @property
+    def references(self):
+        """List of references to other files"""
+
+
     @property
     def properties(self):
         return self.__class__.properties

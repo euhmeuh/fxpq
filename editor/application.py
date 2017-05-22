@@ -10,31 +10,6 @@ from editor.texteditor import FxpqDocumentManager
 from editor.explorer import FxpqExplorer
 
 
-"""
-TODO:
-- Custom tabs with a close button
-- Solution tree / Untracked tree
-- Right click on untracked file -> Include in dimension
-- Disable the create button in the "new file" dialog until validations are satisfied
-- New files saved inside the dimension folder get tracked
-- Better test coverage
-- Remove some exceptions from the serializer that might never raise
-- Replace on_key binding in the texteditor with on_insert and on_delete to better handle disabled areas
-
-Text editor:
-- Line numbers
-- Show matching tags
-- Autocomplete class and properties
-- Right click copy/cut/paste
-- Search & replace
-- Smart tabs
-
-Bugs:
-- Form values are kept when creating from template
-- Saving adds an extra linefeed
-"""
-
-
 class Form:
     """Generates a user form from an input configuration"""
 
@@ -214,7 +189,7 @@ class Application(pygubu.TkApplication):
         filemenu.entryconfig("Save as...", state=state)
 
     def _update_explorer(self):
-        self.explorer.refresh(self.doc_manager.get_objects())
+        self.explorer.refresh(self.doc_manager.documents)
 
 
 class Editor:
