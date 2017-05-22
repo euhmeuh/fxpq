@@ -13,6 +13,91 @@ from core.serializer import Serializer
 from core.tools import partition
 
 
+class EventEmitter:
+    def __init__(self):
+        self.bindings = {}
+
+    def on(self, event_name, method):
+        bindings = self.bindings.get(event_name, [])
+        bindings.append(method)
+        self.bindings[event_name] = bindings
+
+    def emit(self, event_name, *args):
+        for method in self.bindings.get(event_name, []):
+            method(self, *args)
+
+
+class FxpqDocument(EventEmitter):
+    """Holds unique document informations"""
+
+    def __init__(self, filepath=None, title=None, text=None):
+        super().__init__()
+
+        self._filepath = filepath
+        self._title = title
+        self._dirty = (filepath is None)
+        self._opened = False
+
+        self.text = text
+        self.obj = None  # everytime the serialization works, obj is populated
+
+    @property
+    def filepath(self):
+        return self._filepath
+
+    @filepath.setter
+    def filepath(self, value):
+        self._filepath = value
+        self.emit('title-changed')
+
+    @property
+    def title(self):
+        title = "untitled" if self._title is None else self._title
+
+        if self.filepath:
+            title = self.filepath.split('/')[-1]
+
+        if self.dirty:
+            title += "*"
+
+        return title
+
+    @title.setter
+    def title(self, value):
+        self._title = value
+        self.emit('title-changed')
+
+    @property
+    def dirty(self):
+        return self._dirty
+
+    @dirty.setter
+    def dirty(self, value):
+        self._dirty = value
+        self.emit('title-changed')
+
+    def open(self):
+        """Open the document in a new tab of the notebook"""
+        if not self._opened:
+            self._opened = True
+
+            if self.filepath:
+                with open(self.filepath) as f:
+                    self.text = f.read()
+
+            self.emit('document-opened')
+
+    def try_serialize(self, text):
+        self.text = text
+        try:
+            self.obj = Serializer.instance().deserialize(self.text, reference_path=self.filepath)
+        except ValueError:
+            self.obj = None
+            self.emit("validation-failed", Serializer.instance().errors)
+
+        return Serializer.instance().errors
+
+
 class FxpqErrorList(tk.Listbox):
 
     def update(self, errors):
@@ -73,20 +158,14 @@ class FxpqText(LiveText):
         'cdata': r'(<!\[CDATA\[.*?\]\]>)',
     }
 
-    def __init__(self, master=None):
+    def __init__(self, doc, master=None):
         super().__init__(master)
 
-        self.serializer = Serializer.instance()
-        self.obj = None
-
-        self._filepath = ""
-        self._dirty = False
+        self.doc = doc
+        self.text = doc.text
         self._ignore_next_dirty = False
 
-        self.title = ""
-        self.temptitle = "untitled"
-
-        self.error_list = FxpqErrorList()
+        self.errors = []
 
         self.bind('<Key>', self.on_key)
         self.bind("<Tab>", self.on_tab)
@@ -97,24 +176,6 @@ class FxpqText(LiveText):
             selectbackground='#49483e')
         self._configure_tags()
         self._configure_line_numbers()
-
-    @property
-    def filepath(self):
-        return self._filepath
-
-    @filepath.setter
-    def filepath(self, value):
-        self._filepath = value
-        self.update_title()
-
-    @property
-    def dirty(self):
-        return self._dirty
-
-    @dirty.setter
-    def dirty(self, value):
-        self._dirty = value
-        self.update_title()
 
     def on_key(self, key):
 
@@ -148,32 +209,15 @@ class FxpqText(LiveText):
         if self._ignore_next_dirty:
             self._ignore_next_dirty = False
         else:
-            self.dirty = True
+            self.doc.dirty = True
 
         self._remove_tags()
 
-        try:
-            self.obj = self.serializer.deserialize(self.text, reference_path=self.filepath)
-        except ValueError:
-            self.obj = None
-            self.event_generate("<<ValidationError>>")
-            self._highlight_errors(self.serializer.errors)
-
-        self.error_list.update(self.serializer.errors)
+        self.errors = self.doc.try_serialize(self.text)
+        if self.errors:
+            self._highlight_errors()
 
         self._highlight()
-
-    def update_title(self):
-        title = self.temptitle
-
-        if self.filepath:
-            title = self.filepath.split('/')[-1]
-
-        if self.dirty:
-            title += "*"
-
-        self.title = title
-        self.master.master.tab(self.master, text=self.title)
 
     @property
     def text(self):
@@ -181,19 +225,12 @@ class FxpqText(LiveText):
 
     @text.setter
     def text(self, text):
-        self.ignore_next_dirty()
+        # we don't want to trigger on_modified
+        self._ignore_next_dirty = True
+
         self.delete(1.0, tk.END)
         self.insert(tk.END, text)
         self.dirty = False
-
-    def ignore_next_dirty(self):
-        self._ignore_next_dirty = True
-
-    def open(self, filepath):
-        self.filepath = filepath
-        with open(filepath) as f:
-            text = f.read()
-            self.text = text
 
     def _configure_tags(self):
         for tag, val in self.tags:
@@ -212,8 +249,8 @@ class FxpqText(LiveText):
                         "1.0 + {} chars".format(start),
                         "1.0 + {} chars".format(end))
 
-    def _highlight_errors(self, errors):
-        for error in errors:
+    def _highlight_errors(self):
+        for error in self.errors:
             self.tag_add('error',
                 "{}.0 linestart".format(error.line),
                 "{}.0 lineend + 1 chars".format(error.line))
@@ -222,39 +259,69 @@ class FxpqText(LiveText):
         pass  # TODO
 
 
+class FxpqEditor(tk.PanedWindow):
+
+    def __init__(self, doc, master=None):
+        super().__init__(master)
+
+        self.doc = doc
+
+        self.fxpqtext = FxpqText(doc)
+        self.error_list = None
+        self._create_ui()
+
+        self.doc.on('validation-failed', self.on_validation_failed)
+
+    def on_validation_failed(self, doc, errors):
+        if not errors:
+            self.remove(self.error_list)
+            return
+
+        if not self.error_list:
+            # this is the first time we display the error list
+            self.error_list = FxpqErrorList(self)
+            self.add(self.error_list, minsize=50, height=200, sticky=tk.W + tk.S + tk.E)
+
+        self.error_list.update(errors)
+
+    def _create_ui(self):
+        self.config(orient=tk.VERTICAL)
+        self.pack(fill=tk.BOTH, expand=1)
+
+        scrollbar = ScrollbarHelper(master=self, scrolltype='both')
+        scrollbar.add_child(self.fxpqtext)
+        self.fxpqtext.master = scrollbar
+        self.add(scrollbar, height=1000, minsize=300)
+
+
 class FxpqNotebook(ttk.Notebook):
     """Custom notebook"""
+
+    def __init__(self, master=None):
+        super().__init__(master)
+
+        self.fxpqeditors = []
 
     def current(self):
         """Get the currently focused tab"""
 
         if not self.index("end"):
             return None
-        # tab content is in a scrollbarhelper, so we get its child
-        return self.winfo_children()[self.index("current")].cwidget
+        return self.winfo_children()[self.index("current")].doc
 
-    def new(self, filepath=None, title=None, text=""):
-        """Create a new tab"""
+    def on_document_opened(self, doc):
+        fxpqeditor = FxpqEditor(doc, self)
+        self._new_tab(doc.title, fxpqeditor)
 
-        fxpqtext = FxpqText()
-        if filepath:
-            self._new_tab(filepath, fxpqtext)
-            fxpqtext.open(filepath)
-        else:
-            title = "untitled" if title is None else title
-            self._new_tab(title, fxpqtext)
-            fxpqtext.temptitle = title
-            fxpqtext.text = text
-            fxpqtext.dirty = True
+    def on_title_changed(self, doc):
+        fxpqeditor = next((ed for ed in self.fxpqeditors if ed.doc == doc), None)
+        if fxpqeditor:
+            self.tab(fxpqeditor, text=doc.title)
 
-        return fxpqtext
-
-    def _new_tab(self, name, element):
-        scrollbar = ScrollbarHelper(master=self, scrolltype='both')
-        scrollbar.add_child(element)
-        element.master = scrollbar
-        self.add(scrollbar, text=name)
-        self.select(scrollbar)
+    def _new_tab(self, name, fxpqeditor):
+        self.add(fxpqeditor, text=name)
+        self.select(fxpqeditor)
+        self.fxpqeditors.append(fxpqeditor)
 
 
 class FxpqDocumentManager(tk.Frame):
@@ -265,10 +332,8 @@ class FxpqDocumentManager(tk.Frame):
 
         self.documents = []
 
-        self.current_error_list = None
-
-        self.bind_all("<<ValidationError>>", self._on_validation_error)
-        self._create_ui()
+        self.notebook = FxpqNotebook(self)
+        self.notebook.pack(fill=tk.BOTH, expand=1)
 
     def get_objects(self):
         return [doc.obj for doc in self.documents if doc.obj]
@@ -277,32 +342,15 @@ class FxpqDocumentManager(tk.Frame):
         return self.notebook.current()
 
     def new(self, title=None, text=""):
-        doc = self.notebook.new(title=title, text=text)
-        self.documents.append(doc)
+        doc = FxpqDocument(title=title, text=text)
+        self._register_doc(doc)
 
     def open(self, filepath):
-        doc = self.notebook.new(filepath=filepath)
+        doc = FxpqDocument(filepath=filepath)
+        self._register_doc(doc)
+
+    def _register_doc(self, doc):
         self.documents.append(doc)
-
-    def _create_ui(self):
-        self.panedwindow = tk.PanedWindow(self, orient=tk.VERTICAL)
-        self.panedwindow.pack(fill=tk.BOTH, expand=1)
-        self.notebook = FxpqNotebook(self.panedwindow)
-        self.panedwindow.add(self.notebook, height=1000, minsize=300)
-
-    def _on_validation_error(self, event=None):
-        sender = event.widget
-        error_list = sender.error_list
-
-        if self.current_error_list:
-            self.panedwindow.remove(self.current_error_list)
-
-        error_list.master = self.panedwindow
-        self.panedwindow.add(error_list, minsize=50, sticky=tk.W + tk.S + tk.E)
-
-        if not self.current_error_list:
-            # this is the first time we display the error list
-            # so we need to set up a default height
-            self.panedwindow.paneconfig(error_list, height=200)
-
-        self.current_error_list = error_list
+        doc.on('document-opened', self.notebook.on_document_opened)
+        doc.on('title-changed', self.notebook.on_title_changed)
+        doc.open()

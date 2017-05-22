@@ -117,6 +117,7 @@ class Application(pygubu.TkApplication):
         builder.connect_callbacks(self)
         self.mainwindow.bind_all("<Control-o>", self.on_open)
         self.mainwindow.bind_all("<Control-s>", self.on_save)
+        self.mainwindow.bind_all("<<DocumentsChanged>>", self.on_documents_changed)
 
         self._configure_menu()
         self._update_menu()
@@ -156,19 +157,15 @@ class Application(pygubu.TkApplication):
             return
 
         self.doc_manager.open(filepath)
-        self._update_menu()
-        self._update_explorer()
 
     def on_save(self, event=None):
-        fxpqtext = self.doc_manager.current()
-        if fxpqtext.filepath:
-            with open(fxpqtext.filepath, 'w') as f:
-                f.write(fxpqtext.text)
-                fxpqtext.dirty = False
+        doc = self.doc_manager.current()
+        if doc.filepath:
+            with open(doc.filepath, 'w') as f:
+                f.write(doc.text)
+                doc.dirty = False
         else:
             self.on_save_as()
-
-        self._update_explorer()
 
     def on_save_as(self):
         fxpqtext = self.doc_manager.current()
@@ -185,8 +182,6 @@ class Application(pygubu.TkApplication):
             fxpqtext.filepath = filepath
             fxpqtext.dirty = False
 
-        self._update_explorer()
-
     def on_quit(self):
         self.quit()
 
@@ -199,6 +194,10 @@ class Application(pygubu.TkApplication):
 
         button_close.config(command=on_close_about)
         about.run()
+
+    def on_documents_changed(self, event=None):
+        self._update_menu()
+        self._update_explorer()
 
     def _configure_menu(self):
         menu = self.builder.get_object('Submenu_New', self.master)
