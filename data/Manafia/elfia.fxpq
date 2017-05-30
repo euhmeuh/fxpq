@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fxpq>
+<fxpq version="1.0" >
+    <zone map="elfia.map" display_name="Elfia Village">
+        <zone.rectangles>
+            <rectangle h="1" w="1" x="0" y="0" />
+        </zone.rectangles>
+
+        <!-- A zone can contain any element deriving from Object -->
+        <!-- <package:element property="value" /> -->
+        <reference path="golfia.fxpq" />
+        <lolilol />
+
+    </zone>
+</fxpq>

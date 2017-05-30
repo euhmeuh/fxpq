@@ -26,7 +26,6 @@ class FxpqExplorer(ttk.Treeview):
         self.Zone = package_manager.get_class("fxpq.roots", "Zone")
         self.Dimension = package_manager.get_class("fxpq.roots", "Dimension")
 
-        self.documents = []
         self.custom_images = package_manager.get_config("images")
         self.icons = package_manager.get_files_in("icons", self.Object)
 
@@ -35,6 +34,8 @@ class FxpqExplorer(ttk.Treeview):
         self.column('#1', width=100, stretch=False)
         self.heading('#0', text="Element")
         self.heading('type', text="Type")
+
+        self.documents = []
 
     def refresh(self, documents):
         self.clear()
@@ -51,9 +52,8 @@ class FxpqExplorer(ttk.Treeview):
         for i, doc in enumerate(documents):
             others = documents[i + 1:]
             others.extend(documents[:i])
-            for other in others:
-                if doc.filepath in other.get_references():
-                    continue
+            if any([doc.filepath in other.reference_paths for other in others]):
+                continue  # this document is not an orphan, skip it
             result.append(doc)
 
         return result
@@ -62,33 +62,37 @@ class FxpqExplorer(ttk.Treeview):
         parent = parent if parent else ""
 
         if doc.obj:
-            display_name = doc.obj.class_name
-            if hasattr(doc.obj, 'display_name'):
-                display_name = doc.obj.display_name
-
             elt = self.insert(parent, tk.END,
-                text=display_name,
+                text=self._get_display_name(doc.obj),
                 values=(doc.obj.class_name,),
                 image=self._get_image(doc.obj.class_name.lower()),
                 open=True)
 
-            for child in doc.obj.iter_children():
-                child_doc = next((d for d in self.documents if d.obj == child), None)
+            for refpath in doc.reference_paths:
+                child_doc = next((d for d in self.documents if d.filepath == refpath), None)
                 if child_doc:
-                    # the document is opened, we add it as a child
                     self._add(child_doc, parent=elt)
-                else:
-                    if isinstance(child, self.Reference):
-                        child_doc = FxpqDocument(filepath=child.path)
-                        self._add(child_doc, parent=elt)
-                    else:
-                        raise TODO!!!
+
+            for child in doc.obj.iter_children():
+                if isinstance(child, self.Reference):
+                    if doc.full_path(child.path) in [d.filepath for d in self.documents]:
+                        continue  # skip already resolved references
+
+                self._add_link(doc, child, elt)
 
         else:
             elt = self.insert(parent, tk.END,
                 text=doc.title,
                 values=("???",),
                 open=True)
+
+    def _add_link(self, doc, obj, parent):
+        """Add a link to an inline object so that clicking on it will redirect to the file that contains it"""
+        self.insert(parent, tk.END,
+            text=self._get_display_name(obj),
+            values=(obj.class_name,),
+            image=self._get_image(obj.class_name.lower()),
+            open=True)
 
     def _get_image(self, class_name):
         image = self._image_cache.get(class_name, None)
@@ -112,3 +116,11 @@ class FxpqExplorer(ttk.Treeview):
 
     def _try_get_icon(self, filename):
         return next((Path(i) for i in self.icons if Path(i).name == filename), None)
+
+    def _get_display_name(self, obj):
+        display_name = obj.class_name
+        if hasattr(obj, 'display_name'):
+            display_name = obj.display_name
+        if isinstance(obj, self.Reference):
+            display_name = obj.path
+        return display_name

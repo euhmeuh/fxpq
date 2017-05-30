@@ -2,6 +2,8 @@
 Document models
 """
 
+from pathlib import Path
+
 from core.serializer import Serializer
 
 from editor.events import EventEmitter
@@ -16,10 +18,11 @@ class FxpqDocument(EventEmitter):
         self._filepath = filepath
         self._title = title
         self._dirty = (filepath is None)
-        self._opened = False
 
         self.text = text
         self.obj = None  # everytime the serialization works, obj is populated
+
+        self.opened = False
 
     @property
     def filepath(self):
@@ -56,10 +59,20 @@ class FxpqDocument(EventEmitter):
         self._dirty = value
         self.emit('title-changed')
 
+    @property
+    def reference_paths(self):
+        if not self.obj:
+            return []
+
+        return [self.full_path(r.path) for r in self.obj.references]
+
+    def full_path(self, relative_path):
+        return str(Path(self.filepath).parent / relative_path)
+
     def open(self):
         """Open the document in a new tab of the notebook"""
-        if not self._opened:
-            self._opened = True
+        if not self.opened:
+            self.opened = True
 
             if self.filepath:
                 with open(self.filepath) as f:
@@ -71,21 +84,14 @@ class FxpqDocument(EventEmitter):
         self.text = text
         try:
             self.obj = Serializer.instance().deserialize(self.text)
-            Serializer.instance().resolve_references(self.obj, self.filepath)
         except ValueError:
             self.obj = None
-            self.emit("validation-failed", Serializer.instance().errors)
 
         errors = Serializer.instance().errors
 
-        if not errors:
+        if errors:
+            self.emit("validation-failed", errors)
+        else:
             self.emit('validation-passed')
 
         return errors
-
-    def get_references(self):
-        """If the document is serialized, returns all the references"""
-        if not self.obj:
-            return []
-
-        return [r.path for r in self.obj.references]

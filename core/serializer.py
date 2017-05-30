@@ -3,7 +3,6 @@ Serialize from and to XML
 """
 
 from lxml import etree
-from pathlib import Path
 
 from core.generator import Generator
 from core.validator import Validator, Error
@@ -64,23 +63,6 @@ class Serializer:
         # fxpq files always have one child in the root
         first_elt = root[0]
         return self._deserialize_object(first_elt)
-
-    def resolve_references(self, obj, base_path):
-        """Deserialise referenced files recursively using @base_path as the root folder"""
-        resolved = []
-        for reference in obj.references:
-            path = Path(base_path).parent / reference.path
-            if not path.is_file():
-                self._raise_error("Cannot find referenced file \"{0}\".".format(path))
-
-            with open(path) as f:
-                child = self.deserialize(f.read())
-                self.resolve_references(child, path)
-                resolved.append((reference, child))
-
-        for ref, child in resolved:
-            obj.children.remove(ref)
-            obj.children.append(child)
 
     def _serialize_object(self, xml_root, obj):
         name = obj.class_name.lower()

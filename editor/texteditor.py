@@ -259,14 +259,29 @@ class FxpqDocumentManager(tk.Frame):
 
     def new(self, title=None, text=""):
         doc = FxpqDocument(title=title, text=text)
+        self.documents.append(doc)
         self._register_doc(doc)
 
     def open(self, filepath):
-        doc = FxpqDocument(filepath=filepath)
-        self._register_doc(doc)
+        doc = self._find_document(filepath)
+        if not doc:
+            doc = FxpqDocument(filepath=filepath)
+            self.documents.append(doc)
+
+        if not doc.opened:
+            self._register_doc(doc)
 
     def _register_doc(self, doc):
-        self.documents.append(doc)
         doc.on('document-opened', self.notebook.on_document_opened)
         doc.on('title-changed', self.notebook.on_title_changed)
         doc.open()
+
+    def _find_document(self, filepath):
+        for doc in self.documents:
+            if not doc.filepath:
+                continue
+
+            if doc.filepath == filepath:
+                return doc
+
+        return None
