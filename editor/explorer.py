@@ -9,6 +9,8 @@ from tkinter import ttk
 
 from core.tools import ascii_to_xbm
 
+from editor.document import FxpqDocument
+
 
 class FxpqExplorer(ttk.Treeview):
     _image_pattern = "{}.xbm"
@@ -20,9 +22,11 @@ class FxpqExplorer(ttk.Treeview):
 
         self.Object = package_manager.get_class("fxpq.core", "Object")
         self.Quantity = package_manager.get_class("fxpq.core", "Quantity")
+        self.Reference = package_manager.get_class("fxpq.core", "Reference")
         self.Zone = package_manager.get_class("fxpq.roots", "Zone")
         self.Dimension = package_manager.get_class("fxpq.roots", "Dimension")
 
+        self.documents = []
         self.custom_images = package_manager.get_config("images")
         self.icons = package_manager.get_files_in("icons", self.Object)
 
@@ -34,6 +38,7 @@ class FxpqExplorer(ttk.Treeview):
 
     def refresh(self, documents):
         self.clear()
+        self.documents = documents
         for doc in self._find_orphans(documents):
             self._add(doc)
 
@@ -68,7 +73,17 @@ class FxpqExplorer(ttk.Treeview):
                 open=True)
 
             for child in doc.obj.iter_children():
-                self._add(child, parent=elt)
+                child_doc = next((d for d in self.documents if d.obj == child), None)
+                if child_doc:
+                    # the document is opened, we add it as a child
+                    self._add(child_doc, parent=elt)
+                else:
+                    if isinstance(child, self.Reference):
+                        child_doc = FxpqDocument(filepath=child.path)
+                        self._add(child_doc, parent=elt)
+                    else:
+                        raise TODO!!!
+
         else:
             elt = self.insert(parent, tk.END,
                 text=doc.title,

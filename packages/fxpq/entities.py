@@ -5,12 +5,6 @@ Basic entities used in all fxpq files
 from fxpq.core import Object, Property
 
 
-class Reference(Object):
-    """Reference to another fxpq file containing a root object"""
-
-    path = Property(str)
-
-
 class Rectangle(Object):
     """Boundaries of a Zone"""
 

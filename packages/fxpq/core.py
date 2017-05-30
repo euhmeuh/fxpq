@@ -124,7 +124,7 @@ class Object(metaclass=MetaObject):
     @property
     def references(self):
         """List of references to other files"""
-
+        return iter(c for c in self.iter_children() if isinstance(c, Reference))
 
     @property
     def properties(self):
@@ -137,3 +137,9 @@ class Object(metaclass=MetaObject):
     @property
     def class_name(self):
         return self.__class__.__name__
+
+
+class Reference(Object):
+    """Reference to another fxpq file containing a root object"""
+
+    path = Property(str)

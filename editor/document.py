@@ -70,7 +70,8 @@ class FxpqDocument(EventEmitter):
     def try_serialize(self, text):
         self.text = text
         try:
-            self.obj = Serializer.instance().deserialize(self.text, reference_path=self.filepath)
+            self.obj = Serializer.instance().deserialize(self.text)
+            Serializer.instance().resolve_references(self.obj, self.filepath)
         except ValueError:
             self.obj = None
             self.emit("validation-failed", Serializer.instance().errors)
@@ -82,9 +83,9 @@ class FxpqDocument(EventEmitter):
 
         return errors
 
-        def get_references(self):
-            """If the document is serialized, returns all the references"""
-            if not self.obj:
-                return []
+    def get_references(self):
+        """If the document is serialized, returns all the references"""
+        if not self.obj:
+            return []
 
-            return [r.path for r in self.obj.references]
+        return [r.path for r in self.obj.references]
