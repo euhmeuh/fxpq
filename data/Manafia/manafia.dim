@@ -39,7 +39,10 @@
 
         <!-- The content of a dimension is a list of zones and/or references to zones. -->
         <reference path="golfia.fxpq" />
-        <!-- <reference path="elfia.fxpq" /> -->
+        <reference path="elfia.fxpq" />
+        <zone display_name="Inline Zone">
+            <reference path="lolilol.fxpq" />
+        </zone>
 
     </dimension>
 </fxpq>

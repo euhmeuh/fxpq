@@ -9,86 +9,9 @@ from tkinter import ttk
 
 from pygubu.builder.widgets.scrollbarhelper import ScrollbarHelper
 
-from core.serializer import Serializer
 from core.tools import partition
 
-from editor.events import EventEmitter
-
-
-class FxpqDocument(EventEmitter):
-    """Holds unique document informations"""
-
-    def __init__(self, filepath=None, title=None, text=None):
-        super().__init__()
-
-        self._filepath = filepath
-        self._title = title
-        self._dirty = (filepath is None)
-        self._opened = False
-
-        self.text = text
-        self.obj = None  # everytime the serialization works, obj is populated
-
-    @property
-    def filepath(self):
-        return self._filepath
-
-    @filepath.setter
-    def filepath(self, value):
-        self._filepath = value
-        self.emit('title-changed')
-
-    @property
-    def title(self):
-        title = "untitled" if self._title is None else self._title
-
-        if self.filepath:
-            title = self.filepath.split('/')[-1]
-
-        if self.dirty:
-            title += "*"
-
-        return title
-
-    @title.setter
-    def title(self, value):
-        self._title = value
-        self.emit('title-changed')
-
-    @property
-    def dirty(self):
-        return self._dirty
-
-    @dirty.setter
-    def dirty(self, value):
-        self._dirty = value
-        self.emit('title-changed')
-
-    def open(self):
-        """Open the document in a new tab of the notebook"""
-        if not self._opened:
-            self._opened = True
-
-            if self.filepath:
-                with open(self.filepath) as f:
-                    self.text = f.read()
-
-            self.emit('document-opened')
-
-    def try_serialize(self, text):
-        self.text = text
-        try:
-            self.obj = Serializer.instance().deserialize(self.text, reference_path=self.filepath)
-        except ValueError:
-            self.obj = None
-            self.emit("validation-failed", Serializer.instance().errors)
-
-        errors = Serializer.instance().errors
-
-        if not errors:
-            self.emit('validation-passed')
-
-        return errors
+from editor.document import FxpqDocument
 
 
 class FxpqErrorList(tk.Listbox):
@@ -331,22 +254,37 @@ class FxpqDocumentManager(tk.Frame):
         self.notebook = FxpqNotebook(self)
         self.notebook.pack(fill=tk.BOTH, expand=1)
 
-    def get_objects(self):
-        return [doc.obj for doc in self.documents if doc.obj]
-
     def current(self):
         return self.notebook.current()
 
     def new(self, title=None, text=""):
         doc = FxpqDocument(title=title, text=text)
+        self.documents.append(doc)
         self._register_doc(doc)
+        doc.open()
 
     def open(self, filepath):
-        doc = FxpqDocument(filepath=filepath)
-        self._register_doc(doc)
+        doc = self._find_document(filepath)
+        if not doc:
+            doc = FxpqDocument(filepath=filepath)
+            self._register_doc(doc)
+            self.documents.append(doc)
+
+        doc.open()
+
+    def on_explorer_open(self, explorer, filepath):
+        self.open(filepath)
 
     def _register_doc(self, doc):
-        self.documents.append(doc)
         doc.on('document-opened', self.notebook.on_document_opened)
         doc.on('title-changed', self.notebook.on_title_changed)
-        doc.open()
+
+    def _find_document(self, filepath):
+        for doc in self.documents:
+            if not doc.filepath:
+                continue
+
+            if doc.filepath == filepath:
+                return doc
+
+        return None

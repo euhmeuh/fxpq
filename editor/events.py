@@ -1,5 +1,9 @@
 class EventEmitter:
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        # to be used as a mixin, the constructor
+        # allows any arguments, and pass them up to the super() chain
+        super().__init__(*args, **kwargs)
+
         self.bindings = {}
 
     def on(self, event_name, method):

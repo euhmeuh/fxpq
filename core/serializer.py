@@ -3,7 +3,6 @@ Serialize from and to XML
 """
 
 from lxml import etree
-from pathlib import Path
 
 from core.generator import Generator
 from core.validator import Validator, Error
@@ -19,7 +18,7 @@ class Serializer:
     def __init__(self):
         self.Object = self.package_manager.get_class("fxpq.core", "Object")
         self.Quantity = self.package_manager.get_class("fxpq.core", "Quantity")
-        self.Reference = self.package_manager.get_class("fxpq.entities", "Reference")
+        self.Reference = self.package_manager.get_class("fxpq.core", "Reference")
 
         self.objects = self.Object.__subclasses__()
         self.errors = []
@@ -46,11 +45,8 @@ class Serializer:
         result = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE fxpq>\n{}'
         return result.format(document)
 
-    def deserialize(self, xml_string, reference_path=None):
-        """Deserialize an xml fxpq file into an fxpq object
-        Specifying the @reference_path argument enables following references recursively.
-        Otherwise references will just be serialized as Reference instances.
-        """
+    def deserialize(self, xml_string):
+        """Deserialize an xml fxpq file into an fxpq object"""
 
         self.errors = []
 
@@ -66,7 +62,7 @@ class Serializer:
 
         # fxpq files always have one child in the root
         first_elt = root[0]
-        return self._deserialize_object(first_elt, reference_path)
+        return self._deserialize_object(first_elt)
 
     def _serialize_object(self, xml_root, obj):
         name = obj.class_name.lower()
@@ -110,7 +106,7 @@ class Serializer:
         else:
             self._serialize_object(xml_elt, prop_value)
 
-    def _deserialize_object(self, xml_elt, reference_path=None):
+    def _deserialize_object(self, xml_elt):
         tag = etree.QName(xml_elt.tag)
         class_name = tag.localname.title().replace("_", "")
         class_ = next((o for o in self.objects if o.__name__ == class_name), None)
@@ -121,30 +117,23 @@ class Serializer:
         obj = class_()
         self._deserialize_attributes(xml_elt.attrib, obj)
 
-        if isinstance(obj, self.Reference) and reference_path:
-            try:
-                return self._follow_reference(obj, reference_path)
-            except FileNotFoundError as e:
-                self._raise_error("Cannot find referenced file \"{0}\".".format(e.filename), xml_elt.sourceline)
-
         if obj.children_property and is_primitive(class_.children_property.type):
             self._parse_primitive_value(obj, obj.children_property, self._get_text(xml_elt))
 
         for xml_child in xml_elt:
             if "." in xml_child.tag:
-                self._deserialize_attribute_element(xml_child, obj, reference_path)
+                self._deserialize_attribute_element(xml_child, obj)
             else:
                 if not obj.children_property:
                     self._raise_error("The class \"{0}\" does not allow children.".format(class_name), xml_child.sourceline)
 
-                obj_child = self._deserialize_object(xml_child, reference_path)
+                obj_child = self._deserialize_object(xml_child)
 
-                # we don't check type if the child has been
-                # deserialized as an unfollowed Reference
-                if not isinstance(obj_child, self.Reference):
-                    if not isinstance(obj_child, obj.children_property.type):
-                        self._raise_error("The class \"{0}\" does not allow children of type \"{1}\"."
-                            .format(class_name, obj_child.class_name), xml_child.sourceline)
+                # we only accept references and children of the right type
+                if (not isinstance(obj_child, self.Reference)
+                and not isinstance(obj_child, obj.children_property.type)):
+                    self._raise_error("The class \"{0}\" does not allow children of type \"{1}\"."
+                        .format(class_name, obj_child.class_name), xml_child.sourceline)
 
                 obj.children.append(obj_child)
 
@@ -155,7 +144,7 @@ class Serializer:
             prop = obj.properties.get(name)  # will always work, thanks to the validator
             self._parse_primitive_value(obj, prop, value)
 
-    def _deserialize_attribute_element(self, xml_elt, obj, reference_path=None):
+    def _deserialize_attribute_element(self, xml_elt, obj):
         class_name, attr_name = xml_elt.tag.split(".")
         prop = obj.properties.get(attr_name)  # will always work, thanks to the validator
 
@@ -165,7 +154,7 @@ class Serializer:
 
         if prop.is_many():
             for xml_child in xml_elt:
-                obj_child = self._deserialize_object(xml_child, reference_path)
+                obj_child = self._deserialize_object(xml_child)
                 prop.value(obj).append(obj_child)
         else:
             try:
@@ -177,17 +166,7 @@ class Serializer:
                 else:
                     return
 
-            prop.set_value(obj, self._deserialize_object(xml_child, reference_path))
-
-    def _follow_reference(self, reference, reference_path):
-        path = Path(reference_path).parent / reference.path
-        if not path.is_file():
-            exception = FileNotFoundError()
-            exception.filename = path
-            raise exception
-
-        with open(path) as f:
-            return self.deserialize(f.read(), reference_path=path)
+            prop.set_value(obj, self._deserialize_object(xml_child))
 
     def _parse_primitive_value(self, obj, prop, string):
         if prop.type == bool:
