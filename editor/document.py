@@ -59,12 +59,13 @@ class FxpqDocument(EventEmitter):
         self._dirty = value
         self.emit('title-changed')
 
-    @property
-    def reference_paths(self):
-        if not self.obj:
+    def get_reference_paths(self, inline_obj=None):
+        obj = inline_obj if inline_obj else self.obj
+
+        if not obj:
             return []
 
-        return [self.full_path(r.path) for r in self.obj.references]
+        return [self.full_path(r.path) for r in obj.references]
 
     def full_path(self, relative_path):
         return str(Path(self.filepath).parent / relative_path)

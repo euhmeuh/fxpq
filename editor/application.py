@@ -94,6 +94,8 @@ class Application(pygubu.TkApplication):
         self.mainwindow.bind_all("<Control-s>", self.on_save)
         self.mainwindow.bind_all("<<DocumentsChanged>>", self.on_documents_changed)
 
+        self.explorer.on('explorer-open', self.doc_manager.on_explorer_open)
+
         self._configure_menu()
         self._update_menu()
 

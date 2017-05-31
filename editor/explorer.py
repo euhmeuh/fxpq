@@ -9,10 +9,10 @@ from tkinter import ttk
 
 from core.tools import ascii_to_xbm
 
-from editor.document import FxpqDocument
+from editor.events import EventEmitter
 
 
-class FxpqExplorer(ttk.Treeview):
+class FxpqExplorer(EventEmitter, ttk.Treeview):
     _image_pattern = "{}.xbm"
     _image_default = "object"
     _image_cache = {}
@@ -21,21 +21,23 @@ class FxpqExplorer(ttk.Treeview):
         super().__init__(master)
 
         self.Object = package_manager.get_class("fxpq.core", "Object")
-        self.Quantity = package_manager.get_class("fxpq.core", "Quantity")
         self.Reference = package_manager.get_class("fxpq.core", "Reference")
-        self.Zone = package_manager.get_class("fxpq.roots", "Zone")
-        self.Dimension = package_manager.get_class("fxpq.roots", "Dimension")
 
         self.custom_images = package_manager.get_config("images")
         self.icons = package_manager.get_files_in("icons", self.Object)
 
-        self.configure(selectmode='browse', columns=("type",))
+        self.configure(selectmode='browse', columns=("type", "doc"))
         self.column('#0', width=100)
         self.column('#1', width=100, stretch=False)
+        self.column('#2', width=100, stretch=False)
         self.heading('#0', text="Element")
         self.heading('type', text="Type")
+        self.heading('doc', text="Document")
+
+        self.bind("<Double-1>", self.on_double_click)
 
         self.documents = []
+        self.tree_items = {}
 
     def refresh(self, documents):
         self.clear()
@@ -47,52 +49,63 @@ class FxpqExplorer(ttk.Treeview):
         for item in self.get_children():
             self.delete(item)
 
+    def on_double_click(self, event):
+        item = self.identify('item', event.x, event.y)
+        filepath = self.tree_items.get(item, None)
+        if filepath:
+            self.emit('explorer-open', filepath)
+
     def _find_orphans(self, documents):
         result = []
         for i, doc in enumerate(documents):
             others = documents[i + 1:]
             others.extend(documents[:i])
-            if any([doc.filepath in other.reference_paths for other in others]):
+            if any([doc.filepath in other.get_reference_paths() for other in others]):
                 continue  # this document is not an orphan, skip it
             result.append(doc)
 
         return result
 
-    def _add(self, doc, parent=None):
-        parent = parent if parent else ""
+    def _add(self, doc, parent=None, inline_obj=None):
+        """Add a new item in the tree view
+        If @parent is specified, add the item as a child of @parent.
+        If @inline_obj is specified, use it instead of doc.obj (useful for linking an inline object to an already existing document)
+        """
 
-        if doc.obj:
+        parent = parent if parent else ""
+        obj = inline_obj if inline_obj else doc.obj
+
+        destpath = doc.filepath  # the path this item we lead to
+
+        if obj:
             elt = self.insert(parent, tk.END,
-                text=self._get_display_name(doc.obj),
-                values=(doc.obj.class_name,),
-                image=self._get_image(doc.obj.class_name.lower()),
+                text=self._get_display_name(obj),
+                values=(obj.class_name, doc.title),
+                image=self._get_image(obj.class_name.lower()),
                 open=True)
 
-            for refpath in doc.reference_paths:
+            # double-cliking on references will open the referenced file
+            if isinstance(obj, self.Reference):
+                destpath = doc.full_path(obj.path)
+
+            for refpath in doc.get_reference_paths(obj):
                 child_doc = next((d for d in self.documents if d.filepath == refpath), None)
                 if child_doc:
                     self._add(child_doc, parent=elt)
 
-            for child in doc.obj.iter_children():
+            for child in obj.iter_children():
                 if isinstance(child, self.Reference):
                     if doc.full_path(child.path) in [d.filepath for d in self.documents]:
                         continue  # skip already resolved references
 
-                self._add_link(doc, child, elt)
-
+                self._add(doc, parent=elt, inline_obj=child)
         else:
             elt = self.insert(parent, tk.END,
                 text=doc.title,
-                values=("???",),
+                values=("???", doc.title),
                 open=True)
 
-    def _add_link(self, doc, obj, parent):
-        """Add a link to an inline object so that clicking on it will redirect to the file that contains it"""
-        self.insert(parent, tk.END,
-            text=self._get_display_name(obj),
-            values=(obj.class_name,),
-            image=self._get_image(obj.class_name.lower()),
-            open=True)
+        self.tree_items[elt] = destpath
 
     def _get_image(self, class_name):
         image = self._image_cache.get(class_name, None)
