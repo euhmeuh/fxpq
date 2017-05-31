@@ -60,7 +60,7 @@ class FxpqExplorer(EventEmitter, ttk.Treeview):
         for i, doc in enumerate(documents):
             others = documents[i + 1:]
             others.extend(documents[:i])
-            if any([doc.filepath in other.get_reference_paths() for other in others]):
+            if any([other.is_referenced(doc.filepath) for other in others]):
                 continue  # this document is not an orphan, skip it
             result.append(doc)
 

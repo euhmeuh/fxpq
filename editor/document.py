@@ -60,12 +60,32 @@ class FxpqDocument(EventEmitter):
         self.emit('title-changed')
 
     def get_reference_paths(self, inline_obj=None):
+        """Get all the file paths that a document's object references
+        If @inline_obj is specified, use it instead of doc.obj (useful if you want to get the references of an inline object)
+        """
         obj = inline_obj if inline_obj else self.obj
 
         if not obj:
             return []
 
         return [self.full_path(r.path) for r in obj.references]
+
+    def is_referenced(self, filepath):
+        """Check if a filepath is referenced somewhere in the document's object, or in any deeper child"""
+        if not self.obj:
+            return False
+
+        def check_deeper(obj):
+            if filepath in self.get_reference_paths(obj):
+                return True
+
+            for child in obj.iter_children():
+                if check_deeper(child):
+                    return True
+
+            return False
+
+        return check_deeper(self.obj)
 
     def full_path(self, relative_path):
         return str(Path(self.filepath).parent / relative_path)
