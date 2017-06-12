@@ -97,15 +97,6 @@ class Object(metaclass=MetaObject):
         for name, prop in self.properties.items():
             prop.set_value(self, prop.default_value)
 
-    def move(self, delta_time):
-        raise NotImplementedError
-
-    def display(self, delta_time):
-        raise NotImplementedError
-
-    def act(self, delta_time):
-        raise NotImplementedError
-
     def has_object_children(self):
         return self.children_property and self.children_property.type not in [str, int, float, bool]
 
