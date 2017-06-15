@@ -5,8 +5,7 @@ Document models
 from pathlib import Path
 
 from core.serializer import Serializer
-
-from editor.events import EventEmitter
+from core.events import EventEmitter
 
 
 class FxpqDocument(EventEmitter):

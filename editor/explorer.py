@@ -8,8 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from core.tools import ascii_to_xbm
-
-from editor.events import EventEmitter
+from core.events import EventEmitter
 
 
 class FxpqExplorer(EventEmitter, ttk.Treeview):

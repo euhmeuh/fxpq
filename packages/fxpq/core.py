@@ -2,6 +2,8 @@
 Core FXPQ objects
 """
 
+import uuid
+
 from enum import Enum
 
 
@@ -89,6 +91,8 @@ class Object(metaclass=MetaObject):
     root = False
 
     def __init__(self):
+        self.id = uuid.uuid4()
+
         if self.children_property:
             self.children = self.children_property.default_value
         else:

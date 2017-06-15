@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fxpq>
+<fxpq version="1.0" xmlns:fxp2="python-namespace:fxp2">
+    <zone map="lobby.map" display_name="Lobby">
+        <zone.rectangles>
+            <rectangle h="1" w="1" x="0" y="0" />
+        </zone.rectangles>
+
+        <factory>
+            <factory.sync>
+                <event name="sync-dimensions">
+                    <patch property="address" value="address" />
+                    <patch property="display_name" value="name" />
+                </event>
+            </factory.sync>
+
+            <reference path="dimension_portal.fxpq" />
+        </factory>
+    </zone>
+</fxpq>

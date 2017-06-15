@@ -3,7 +3,7 @@ Fxpq server
 """
 
 from core.application import Application
-from server.services import DimensionService, AuthenticationService, ZoneService, PhysicsService, DoorService
+from server.services import LoggingService, DimensionService, AuthenticationService, ZoneService, PhysicsService, DoorService
 
 
 class MasterServer(Application):
@@ -13,6 +13,7 @@ class MasterServer(Application):
         super().__init__()
 
         self.services = [
+            LoggingService(),
             DimensionService()
         ]
 
@@ -24,6 +25,7 @@ class DimensionServer(Application):
         super().__init__(master_server)
 
         self.services = [
+            LoggingService(),
             AuthenticationService(),
             ZoneService()
         ]
@@ -36,6 +38,7 @@ class ZoneServer(Application):
         super().__init__(master_dimension)
 
         self.services = [
+            LoggingService(),
             PhysicsService(),
             DoorService()
         ]

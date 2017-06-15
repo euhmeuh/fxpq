@@ -1,3 +1,8 @@
+"""
+Event system that allows losely coupled communication between objects and services
+"""
+
+
 class EventEmitter:
     def __init__(self, *args, **kwargs):
         # to be used as a mixin, the constructor
