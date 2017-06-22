@@ -6,6 +6,17 @@ Used to implement a server or a client. It runs a given list of services in an i
 from core.connection import Broker
 
 
+class Service:
+    def subscribe(self, broker):
+        self.broker = broker
+
+    def fetch_res(self, name):
+        return self.broker.fetch_res(name)
+
+    def send_res(self, name, res):
+        self.broker.send_res(name, res)
+
+
 class Application:
     """Base server class"""
 
