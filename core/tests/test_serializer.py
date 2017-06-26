@@ -1,5 +1,5 @@
 """
-Unit tests for fxpqeditor
+Unit tests for the serializer
 """
 
 import unittest

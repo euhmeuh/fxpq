@@ -5,6 +5,9 @@ Fxpq client
 import cocos
 from cocos import actions
 
+from core.application import Application
+from client.services import LoggingService, NetworkingService, DimensionService
+
 from core.package_manager import PackageManager
 from core.serializer import Serializer
 
@@ -44,7 +47,7 @@ class KeyboardLayer(cocos.layer.Layer):
         print(self.keys)
 
 
-class Client:
+class CocosClient:
     def __init__(self):
         self.current_scene = None
 
@@ -71,3 +74,16 @@ class Client:
             main_layer.add(label)
 
         return cocos.scene.Scene(main_layer)
+
+
+class Client(Application):
+    """Master server that lists registered servers"""
+
+    def __init__(self):
+        super().__init__()
+
+        self.services = [
+            LoggingService(),
+            NetworkingService("localhost", 8448),
+            DimensionService()
+        ]
