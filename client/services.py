@@ -3,7 +3,7 @@ Services that a client application can run.
 """
 
 from core.application import Service
-from core.connection import ClientConnection
+from core.connection import ClientConnection, Direction
 
 
 class NetworkingService(Service):
@@ -14,7 +14,7 @@ class NetworkingService(Service):
     def subscribe(self, broker):
         super().subscribe(broker)
 
-        self.connection = ClientConnection(self.url, self.port)
+        self.connection = ClientConnection(broker, self.url, self.port)
         broker.connect(self.connection)
 
 
@@ -24,8 +24,12 @@ class DimensionService(Service):
 
     def run(self, delta_time):
         if delta_time > 2.0:
-            self.broker.send_res("dimension", "http://rilouw.eu/fxp2/manafia")
+            self.broker.send_res("dimension", "http://rilouw.eu/fxp2/manafia", direction=Direction.UP)
+            self.broker.fetch_res("dimension-list", self.on_dimension_list_received, direction=Direction.UP)
             return True
+
+    def on_dimension_list_received(self, dimension_list):
+        print(dimension_list)
 
 
 class LoggingService(Service):

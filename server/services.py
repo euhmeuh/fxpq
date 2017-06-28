@@ -13,7 +13,7 @@ class NetworkingService(Service):
     def subscribe(self, broker):
         super().subscribe(broker)
 
-        self.connection = ServerConnection(self.port)
+        self.connection = ServerConnection(broker, self.port)
         broker.connect(self.connection)
 
 
@@ -21,7 +21,7 @@ class DimensionListService(Service):
     """Handles the list of dimensions available in a server"""
 
     def __init__(self):
-        self.dimensions = []
+        self.dimensions = set()
 
     def subscribe(self, broker):
         super().subscribe(broker)
@@ -31,7 +31,7 @@ class DimensionListService(Service):
         broker.on("dimension-disconnected", self.on_dimension_disconnected)
 
     def on_dimension_received(self, sender, dimension):
-        self.dimensions.append(dimension)
+        self.dimensions.add(dimension)
 
     def on_dimension_disconnected(self, sender, id_):
         dimension = next((d for d in self.dimensions if d.id == id_), None)
