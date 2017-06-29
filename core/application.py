@@ -17,12 +17,6 @@ class Service:
     def run(self, delta_time):
         pass
 
-    def fetch_res(self, name):
-        return self.broker.fetch_res(name)
-
-    def send_res(self, name, res):
-        self.broker.send_res(name, res)
-
 
 class Application:
     """Base application class for the server and the client"""

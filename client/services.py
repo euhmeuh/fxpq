@@ -22,6 +22,11 @@ class DimensionService(Service):
 
     can_run = True
 
+    def subscribe(self, broker):
+        super().subscribe(broker)
+
+        broker.provide_res("dimension-list", lambda: {"local_dim"})
+
     def run(self, delta_time):
         if delta_time > 2.0:
             self.broker.send_res("dimension", "http://rilouw.eu/fxp2/manafia", direction=Direction.UP)

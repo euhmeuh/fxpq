@@ -56,11 +56,13 @@ class ServerConnection(pb.Root):
     @call_from_reactor
     def fetch_res(self, name):
         """Ask clients for a resource"""
+        raise NotImplementedError
         return self.clients.callRemote("fetch_res", name)
 
     @call_from_reactor
     def send_res(self, name, res):
         """Send a resource to the clients"""
+        raise NotImplementedError
         self.clients.callRemote("send_res", name, res)
 
     def close(self):
@@ -70,10 +72,9 @@ class ServerConnection(pb.Root):
 
     def remote_fetch_res(self, name):
         """The client asked for a resource"""
-
-        # we pass None as the callback, because we don't want to do anything, we just send
-        # the Deferred back to the client
-        return self.broker.fetch_res(name, None, direction=Direction.UP)
+        deferred = defer.Deferred()
+        self.broker.fetch_res(name, lambda result: deferred.callback(result), direction=Direction.UP)
+        return deferred
 
     def remote_send_res(self, name, res):
         """The client sent a resource"""
@@ -108,19 +109,29 @@ class ClientConnection(pb.Referenceable):
     @call_from_reactor
     def fetch_res(self, name):
         """Ask the server for a resource"""
-        return self.server.callRemote("fetch_res", name)
+        if not self.server:
+            return None
+
+        try:
+            return self.server.callRemote("fetch_res", name)
+        except pb.DeadReferenceError as e:
+            self.on_connection_failed(e)
+            return None
 
     @call_from_reactor
     def send_res(self, name, res):
         """Send a resource to the server"""
-        self.server.callRemote("send_res", name, res)
+        if self.server:
+            try:
+                self.server.callRemote("send_res", name, res)
+            except pb.DeadReferenceError as e:
+                self.on_connection_failed(e)
 
     def remote_fetch_res(self, name):
         """The server asked for a resource"""
-
-        # we pass None as the callback, because we don't want to do anything, we just send
-        # the Deferred back to the client
-        return self.broker.fetch_res(name, None, direction=Direction.DOWN)
+        deferred = defer.Deferred()
+        self.broker.fetch_res(name, lambda result: deferred.callback(result), direction=Direction.DOWN)
+        return deferred
 
     def remote_send_res(self, name, res):
         """The server sent a resource"""
@@ -166,8 +177,6 @@ class Broker(EventEmitter):
         """Call this from your service to tell the broker you are interested in receiving a resource"""
         self.on("{}-received".format(name), on_received_callback)
 
-    @to_defer
-    @call_from_reactor
     def fetch_res(self, name, on_received_callback, direction=Direction.LOCAL):
         """Immediately ask for a resource"""
         results = []
@@ -178,43 +187,48 @@ class Broker(EventEmitter):
             if res:
                 results.append(res)
 
-        local_deferred = defer.Deferred()
-
-        connections = self._get_connections(direction)
-        if connections:
-            # if we have connections, create a deferred for every fetch attempt
-            # and join them in a DeferredList, along with the local results
-
-            defer_list = [local_deferred]
-
-            for connection in connections:
-                df = connection.fetch_res(name)
-                defer_list.append(df)
-
-            deferred = defer.gatherResults(defer_list)
+        if self.connections:
+            self._fetch_online_res(name, results, on_received_callback, direction=direction)
         else:
-            deferred = local_deferred
-
-        deferred.pause()
-        deferred.addCallback(lambda results: Resource.merge(results))
-        if on_received_callback:
-            deferred.addCallback(on_received_callback)
-        deferred.unpause()
-
-        local_deferred.callback(results)
-
-        return deferred
+            on_received_callback(Resource.merge(results))
 
     def send_res(self, name, res, direction=Direction.LOCAL):
         """Immediately send a resource"""
         self.emit("{}-received".format(name), res)
 
-        for connection in self._get_connections(direction):
-            connection.send_res(name, res)
+        if self.connections:
+            self._send_online_res(name, res, direction=direction)
 
     def emit_event(self, name, *args, direction=Direction.LOCAL):
         self.emit(name, *args)
 
+        if self.connections:
+            self._emit_online_event(name, *args, direction=direction)
+
+    @to_defer
+    @call_from_reactor
+    def _fetch_online_res(self, name, local_res, on_received_callback, direction=Direction.LOCAL):
+        local_deferred = defer.Deferred()
+        defer_list = [local_deferred]
+
+        for connection in self._get_connections(direction):
+            df = connection.fetch_res(name)
+            defer_list.append(df)
+
+        deferred = defer.gatherResults(defer_list)
+
+        deferred.pause()
+        deferred.addCallback(lambda results: Resource.merge(results))
+        deferred.addCallback(on_received_callback)
+        deferred.unpause()
+
+        local_deferred.callback(local_res)
+
+    def _send_online_res(self, name, res, direction=Direction.LOCAL):
+        for connection in self._get_connections(direction):
+            connection.send_res(name, res)
+
+    def _emit_online_event(self, name, *args, direction=Direction.LOCAL):
         for connection in self._get_connections(direction):
             connection.emit_event(name, *args)
 
