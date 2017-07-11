@@ -135,7 +135,7 @@ class ServerConnection(pb.Root):
         self.clients.callRemote("send_res", name, res)
 
     def close(self):
-        reactor.stop()
+        call_from_reactor(reactor.stop)()
         if self.thread:
             self.thread.join()
 
@@ -170,7 +170,7 @@ class ClientConnection(pb.Referenceable):
         reactor.run(False)
 
     def close(self):
-        reactor.stop()
+        call_from_reactor(reactor.stop)()
         if self.thread:
             self.thread.join()
 
