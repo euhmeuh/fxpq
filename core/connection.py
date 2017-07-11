@@ -33,10 +33,79 @@ class Direction(Enum):
     BOTH = 3
 
 
-class Resource:
+class Comparable:
+    def key(self):
+        return self
+
+    def __lt__(self, other):
+        return self.key() < self._get_key(other)
+
+    def __gt__(self, other):
+        return self.key() > self._get_key(other)
+
+    def __le__(self, other):
+        return self.key() <= self._get_key(other)
+
+    def __ge__(self, other):
+        return self.key() >= self._get_key(other)
+
+    def __eq__(self, other):
+        return self.key() == self._get_key(other)
+
+    def __ne__(self, other):
+        return self.key() != self._get_key(other)
+
+    def __hash__(self):
+        return hash(self.key())
+
+    @staticmethod
+    def _get_key(obj):
+        if hasattr(obj, "key"):
+            return obj.key()
+        else:
+            return obj
+
+
+class Resource(Comparable):
     @classmethod
     def merge(cls, res_list):
-        return res_list
+
+        if res_list is None:
+            return None
+
+        result = None
+        method = Resource._handle_object
+
+        if any((Resource._is_iterable(res) for res in res_list)):
+            result = set()
+            method = Resource._handle_iterable
+
+        for res in res_list:
+            if res is None:
+                continue
+
+            result = method(result, res)
+
+        return list(result) if Resource._is_iterable(result) else result
+
+    @staticmethod
+    def _is_iterable(res):
+        return isinstance(res, (list, tuple, set))
+
+    @staticmethod
+    def _handle_object(result_so_far, res):
+        if result_so_far is None:
+            return res
+
+        try:
+            return max(res, result_so_far)
+        except TypeError:
+            return result_so_far
+
+    @staticmethod
+    def _handle_iterable(result_so_far, res):
+        res = set(res) if Resource._is_iterable(res) else set([res])
+        return result_so_far.union(res)
 
 
 class ServerConnection(pb.Root):
@@ -209,6 +278,7 @@ class Broker(EventEmitter):
     @call_from_reactor
     def _fetch_online_res(self, name, local_res, on_received_callback, direction=Direction.LOCAL):
         local_deferred = defer.Deferred()
+        local_deferred.addCallback(lambda results: Resource.merge(results))
         defer_list = [local_deferred]
 
         for connection in self._get_connections(direction):
@@ -220,6 +290,7 @@ class Broker(EventEmitter):
         deferred.pause()
         deferred.addCallback(lambda results: Resource.merge(results))
         deferred.addCallback(on_received_callback)
+        deferred.addErrback(lambda e: print(e))
         deferred.unpause()
 
         local_deferred.callback(local_res)
