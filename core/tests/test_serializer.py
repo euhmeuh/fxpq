@@ -15,7 +15,6 @@ class SerializerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         pm = PackageManager(cls.packages_dir)
-        Serializer.package_manager = pm
         cls.Zone = pm.get_class("fxpq.roots", "Zone")
         cls.Dimension = pm.get_class("fxpq.roots", "Dimension")
         cls.Change = pm.get_class("fxpq.entities", "Change")
@@ -25,24 +24,28 @@ class SerializerTests(unittest.TestCase):
         cls.xmldimension = '<?xml version="1.0" encoding="UTF-8"?>\n'\
             '<!DOCTYPE fxpq>\n'\
             '<fxpq version="1.0">'\
-            '<dimension cellsize="16" display_name="My Favorite Dimension">'\
-            '<dimension.changelog><change version="0.1">We did some stuff, I think..</change>'\
+            '<dimension cellsize="16" display_name="My Favorite Dimension" guid="1234">'\
+            '<dimension.authors><author>Jean Rochefort</author>'\
+            '<author>Jean Rochefort</author></dimension.authors>'\
+            '<dimension.changelog>'\
+            '<change version="0.1">We did some stuff, I think..</change>'\
             '<change breaking="True" version="0.2">We did some stuff, I think..</change>'\
             '<change version="0.3">We did some stuff, I think..</change>'\
-            '</dimension.changelog><dimension.authors><author>Jean Rochefort</author>'\
-            '<author>Jean Rochefort</author></dimension.authors><zone><zone.rectangles>'\
+            '</dimension.changelog><zone display_name=""><zone.rectangles>'\
             '<rectangle h="1" w="1"/></zone.rectangles></zone></dimension></fxpq>'
         cls.maxDiff = None
 
     def test_serialize_dimension(self):
         obj = SerializerTests.Dimension()
         obj.display_name = "My Favorite Dimension"
+        obj.guid = 1234
         obj.cellsize = 16
         obj.changelog = list(SerializerTests._sample_changes(3))
         obj.authors = list(SerializerTests._sample_authors(2))
         obj.children = list(SerializerTests._sample_zones(1))
 
-        self.assertEqual(Serializer.instance().serialize(obj), SerializerTests.xmldimension)
+        serialized = Serializer.instance().serialize(obj)
+        self.assertEqual(serialized, SerializerTests.xmldimension)
 
     def test_deserialize_dimension(self):
         dimension = Serializer.instance().deserialize(SerializerTests.xmldimension)

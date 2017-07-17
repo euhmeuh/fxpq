@@ -5,6 +5,8 @@ Creates new files from templates with {{moustache}} syntax
 from os import path
 import regex as re
 
+from core.tools import get_subclasses
+
 
 class Templator:
     _default_template = r"fxpq/templates/{{object}}.fxpq"
@@ -12,7 +14,7 @@ class Templator:
     def __init__(self, package_manager):
         self.package_manager = package_manager
         self.Object = package_manager.get_class("fxpq.core", "Object")
-        self.objects = self.Object.__subclasses__()
+        self.objects = list(get_subclasses(self.Object))
 
         self.templates = package_manager.get_files_in("templates", self.Object)
 

@@ -2,14 +2,14 @@
 Generates DTD rules from python packages
 """
 
-from core.tools import is_primitive
+from core.tools import is_primitive, get_subclasses, get_namespace
 
 
 class Generator:
     def __init__(self, package_manager):
         self.package_manager = package_manager
         self.Object = package_manager.get_class("fxpq.core", "Object")
-        self.objects = self.Object.__subclasses__()
+        self.objects = list(get_subclasses(self.Object))
 
     def generate(self):
         result = []
@@ -125,7 +125,7 @@ class Generator:
         return "<!ELEMENT {0}.{1} {2}>".format(element_name, name, children)
 
     def _format_name(self, class_):
-        namespace = self._get_namespace(class_)
+        namespace = get_namespace(class_)
         element_name = class_.__name__.lower()
 
         # elements that are not part of the fxpq namespace
@@ -134,6 +134,3 @@ class Generator:
             element_name = namespace + ":" + element_name
 
         return element_name
-
-    def _get_namespace(self, class_):
-        return class_.__module__.split(".")[0]

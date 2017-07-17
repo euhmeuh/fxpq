@@ -28,6 +28,16 @@ def bool_from_string(string):
     return False if string.lower() in false_values else bool(string)
 
 
+def get_namespace(cls):
+    return cls.__module__.split(".")[0]
+
+
+def get_subclasses(cls):
+    for subclass in cls.__subclasses__():
+        yield from get_subclasses(subclass)
+        yield subclass
+
+
 def ascii_to_xbm(string, black='#', white=' '):
     """Generate a XBM image from an ascii art string"""
 

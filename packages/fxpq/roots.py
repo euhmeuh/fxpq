@@ -2,31 +2,37 @@
 Root entities allowed once in every fxpq file
 """
 
-from fxpq.core import Object, Property, Quantity
-from fxpq.entities import Rectangle, Change, Author
+from fxpq.core import Object, Property, Quantity as Q
+from fxpq.entities import Rectangle, Door, Change, Author
 
 
 class Zone(Object):
     root = True
-    children = Property(Object, quantity=Quantity.ZeroOrMore)
+    children = Property(Object, quantity=Q.ZeroOrMore)
 
     map = Property(str)
-    display_name = Property(str)
-    rectangles = Property(Rectangle, quantity=Quantity.OneOrMore, required=True)
+    display_name = Property(str, quantity=Q.ExactlyOne)
+    rectangles = Property(Rectangle, quantity=Q.OneOrMore)
+    doors = Property(Door, quantity=Q.ZeroOrMore)
 
 
 class Dimension(Object):
     root = True
-    children = Property(Zone, quantity=Quantity.ZeroOrMore)
+    children = Property(Zone, quantity=Q.ZeroOrMore)
+
+    guid = Property(str, quantity=Q.ExactlyOne)
+    display_name = Property(str, quantity=Q.ExactlyOne)
+    cellsize = Property(int, quantity=Q.ExactlyOne)
 
     version = Property(str)
-    guid = Property(str)
-    display_name = Property(str)
-    changelog = Property(Change, quantity=Quantity.ZeroOrMore)
-    authors = Property(Author, quantity=Quantity.OneOrMore)
     description = Property(str)
-    cellsize = Property(int)
+
+    authors = Property(Author, quantity=Q.OneOrMore)
+    changelog = Property(Change, quantity=Q.ZeroOrMore)
 
 
-class Lolilol(Object):
+class Factory(Object):
     root = True
+    children = Property(Object, quantity=Q.ExactlyOne)
+
+    resource = Property(str, quantity=Q.ExactlyOne)

@@ -6,7 +6,7 @@ from lxml import etree
 
 from core.generator import Generator
 from core.validator import Validator, Error
-from core.tools import is_primitive, remove_encoding_tag, bool_from_string
+from core.tools import is_primitive, remove_encoding_tag, bool_from_string, get_subclasses, get_namespace
 
 
 class Serializer:
@@ -20,7 +20,7 @@ class Serializer:
         self.Quantity = self.package_manager.get_class("fxpq.core", "Quantity")
         self.Reference = self.package_manager.get_class("fxpq.core", "Reference")
 
-        self.objects = self.Object.__subclasses__()
+        self.objects = list(get_subclasses(self.Object))
         self.errors = []
 
         self.generator = Generator(self.package_manager)
@@ -72,6 +72,7 @@ class Serializer:
         for attrib_elt, prop in attrib_elts.items():
             xml_attrib_elt = etree.SubElement(xml_elt, attrib_elt)
             self._serialize_property_value(xml_attrib_elt, prop, obj)
+
         if obj.children_property:
             self._serialize_property_value(xml_elt, obj.children_property, obj)
 
@@ -109,10 +110,14 @@ class Serializer:
     def _deserialize_object(self, xml_elt):
         tag = etree.QName(xml_elt.tag)
         class_name = tag.localname.title().replace("_", "")
-        class_ = next((o for o in self.objects if o.__name__ == class_name), None)
+        namespace = tag.namespace
+        if namespace is not None:
+            namespace = namespace.split(":")[-1]
+
+        class_ = self._find_class(class_name, namespace)
         if not class_:
-            raise ValueError("There is no class with name \"{0}\" corresponding to the object \"{1}\"."
-                .format(class_name, tag.localname))
+            raise ValueError("There is no class with name \"{0}\" corresponding to the object \"{1}\" in the namespace \"{2}\"."
+                .format(class_name, tag.localname, namespace))
 
         obj = class_()
         self._deserialize_attributes(xml_elt.attrib, obj)
@@ -135,7 +140,10 @@ class Serializer:
                     self._raise_error("The class \"{0}\" does not allow children of type \"{1}\"."
                         .format(class_name, obj_child.class_name), xml_child.sourceline)
 
-                obj.children.append(obj_child)
+                if obj.children_property.is_many():
+                    obj.children.append(obj_child)
+                else:
+                    obj.children = obj_child
 
         return obj
 
@@ -183,6 +191,11 @@ class Serializer:
             string += xml_elt.tail
 
         return string
+
+    def _find_class(self, class_name, namespace):
+        for class_ in self.objects:
+            if class_.__name__ == class_name and (namespace is None or get_namespace(class_) == namespace):
+                return class_
 
     def _raise_error(self, message, sourceline=0):
         error = Error(message)

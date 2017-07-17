@@ -15,14 +15,13 @@ class Quantity(Enum):
 
 
 class Property:
-    def __init__(self, content_type, quantity=Quantity.ExactlyOne, required=False, default_value=None):
+    def __init__(self, content_type, quantity=Quantity.ZeroOrOne, default_value=None):
         if not isinstance(content_type, type):
             raise ValueError("Property's content_type parameter must be a type.")
 
         self.name = ""
         self.type = content_type
         self.quantity = quantity
-        self.required = required
 
         self._default_value = default_value
         if default_value is None:
@@ -38,6 +37,10 @@ class Property:
             return self._default_value.copy()
         else:
             return self._default_value
+
+    @property
+    def required(self):
+        return self.quantity in (Quantity.ExactlyOne, Quantity.OneOrMore)
 
     def value(self, obj):
         return getattr(obj, self.name)
@@ -58,6 +61,12 @@ class MetaObject(type):
     def __new__(cls, clsname, bases, dct):
         properties = {}
         others = {}
+
+        for base in bases:
+            if not issubclass(base, Object):
+                continue
+            properties.update(base.properties)
+
         for name, value in dct.items():
             if isinstance(value, Property):
                 value.name = name
@@ -137,4 +146,4 @@ class Object(metaclass=MetaObject):
 class Reference(Object):
     """Reference to another fxpq file containing a root object"""
 
-    path = Property(str)
+    path = Property(str, quantity=Quantity.ExactlyOne)

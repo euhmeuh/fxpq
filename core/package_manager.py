@@ -9,6 +9,7 @@ import pkgutil
 import importlib
 
 from core.serializer import Serializer
+from core.tools import get_subclasses
 
 
 class PackageManager:
@@ -91,7 +92,7 @@ class PackageManager:
         """
         modules = self.modules
         if base_class:
-            modules = [c.__module__ for c in base_class.__subclasses__()]
+            modules = [c.__module__ for c in get_subclasses(base_class)]
 
         namespaces = {module.split(".")[0] for module in modules}
 
