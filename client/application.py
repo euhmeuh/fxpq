@@ -6,7 +6,7 @@ import cocos
 from cocos import actions
 
 from core.application import Application
-from client.services import LoggingService, NetworkingService, DimensionService
+from client.services import LoggingService, NetworkingService, DimensionService, DisplayService
 
 from core.package_manager import PackageManager
 from core.serializer import Serializer
@@ -85,5 +85,5 @@ class Client(Application):
         self.services = [
             LoggingService(),
             NetworkingService("localhost", 8448),
-            DimensionService()
+            DisplayService()
         ]

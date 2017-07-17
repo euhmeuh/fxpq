@@ -28,7 +28,7 @@ class DimensionServer(Application):
         self.services = [
             LoggingService(),
             AuthenticationService(),
-            ZoneService()
+            #ZoneListService()
         ]
 
 
@@ -39,7 +39,9 @@ class ZoneServer(Application):
         super().__init__(master_dimension)
 
         self.services = [
+            NetworkingService(8448),
             LoggingService(),
             PhysicsService(),
-            DoorService()
+            DoorService(),
+            ZoneService("data/Manafia/golfia.fxpq")
         ]

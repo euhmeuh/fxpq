@@ -44,11 +44,22 @@ class LoggingService(Service):
         broker.on_any(self.on_event_received)
 
     def on_event_received(self, sender, event, *args):
-        print("[Event {0}] {1}".format(event, ",".join(args)))
+        print("[Event {0}] {1}".format(event, ",".join(map(str, args))))
 
 
 class DisplayService(Service):
     """Handles object display on the player's screen"""
 
+    can_run = True
+
     def __init__(self):
-        pass
+        self.zone = None
+
+    def run(self, delta_time):
+        if delta_time > 1.0:
+            self.broker.fetch_res("zone", self.on_zone_received, direction=Direction.UP)
+            print(self.zone)
+            return True
+
+    def on_zone_received(self, zone):
+        self.zone = zone

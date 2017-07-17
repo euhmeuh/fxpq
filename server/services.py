@@ -4,6 +4,8 @@ Services that a server application can run.
 
 from core.application import Service
 from core.connection import ServerConnection
+from core.serializer import Serializer
+from core.package_manager import PackageManager
 
 
 class NetworkingService(Service):
@@ -46,18 +48,15 @@ class LoggingService(Service):
     """Log broker events"""
 
     def subscribe(self, broker):
+        super().subscribe(broker)
         broker.on_any(self.on_event_received)
 
     def on_event_received(self, sender, event, *args):
-        print("[Event {0}] {1}".format(event, ",".join(args)))
+        print("[Event {0}] {1}".format(event, ",".join(map(str, args))))
 
 
 class AuthenticationService(Service):
     """Handles player connection to a dimension"""
-
-
-class ZoneService(Service):
-    """Handles instantiating zones for the players"""
 
 
 class PhysicsService(Service):
@@ -66,3 +65,31 @@ class PhysicsService(Service):
 
 class DoorService(Service):
     """Handles players moving from zone to zone"""
+
+
+class ZoneService(Service):
+    """Handles objects in the zone, and make them act"""
+
+    can_run = False
+
+    def __init__(self, zone_filepath):
+        self.package_manager = PackageManager("./packages")
+        self.zone = None
+
+        with open(zone_filepath) as f:
+            self.zone = Serializer.instance().deserialize(f.read())
+
+        print("Loaded zone \"{}\"".format(self.zone.display_name))
+        print("The zone contains {} object(s):".format(len(self.zone.children)))
+        for c in self.zone.children:
+            print(c.class_name)
+
+    def subscribe(self, broker):
+        super().subscribe(broker)
+        broker.provide_res("zone", self.get_zone)
+
+    def run(self, delta_time):
+        pass
+
+    def get_zone(self):
+        return self.zone.display_name
